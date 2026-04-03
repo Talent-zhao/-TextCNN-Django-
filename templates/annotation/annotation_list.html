@@ -1,0 +1,247 @@
+{% extends "admin_base.html" %}
+{% block title %}样本标注{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">样本标注列表</h3></div>
+    <div class="panel-body">
+        <form method="get" class="form-inline rawtext-toolbar" id="annotationFilterForm" style="margin-bottom: 12px;">
+            <input type="text" name="keyword" value="{{ keyword }}" class="form-control input-sm rawtext-toolbar-input" placeholder="按内容搜索">
+            <select name="status" class="form-control input-sm rawtext-toolbar-input">
+                {% for k,v in status_choices %}
+                    <option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">查询</button>
+            <span class="rawtext-toolbar-gap"></span>
+            <span class="text-muted small">快捷：</span>
+            <a href="{% url 'annotation_list' %}?status=pending_label&amp;keyword={{ keyword|urlencode }}" class="btn btn-default btn-sm">待标注</a>
+            <a href="{% url 'annotation_list' %}?status=labeled&amp;keyword={{ keyword|urlencode }}" class="btn btn-default btn-sm">已标注</a>
+            {% if pagination_show %}
+            <span class="rawtext-toolbar-gap"></span>
+            <span class="rawtext-jump-label text-muted">跳转</span>
+            <input type="number" class="form-control input-sm rawtext-jump-page" id="annotationPageJump" min="1" max="{{ num_pages }}"
+                   value="{{ page_obj.number }}" title="页码">
+            <button type="button" class="btn btn-default btn-sm" id="annotationPageJumpBtn">GO</button>
+            {% endif %}
+            <span class="rawtext-toolbar-gap"></span>
+            <button type="button" class="btn btn-default btn-sm" title="仅启用 code 0/1，停用内置 2/3；用于二分类标注" onclick="initBinary()">初始化二分类标签</button>
+            <button type="button" class="btn btn-default btn-sm" title="启用内置 code 0–3；用于四分类标注" onclick="initFour()">初始化四分类标签</button>
+        </form>
+
+        <p class="help-block small text-muted" style="margin-bottom:10px;">
+            标注后数据保留为「已标注」，在上方状态中选「已标注」或点快捷按钮即可查看标签；确认无误后勾选并「送待预测」，再到「待预测」页执行模型预测。
+        </p>
+
+        {% if status == 'labeled' %}
+        <div class="form-inline" style="margin-bottom: 10px;">
+            <button type="button" class="btn btn-warning" onclick="batchSendPredict()">勾选送待预测</button>
+            <span class="text-muted small" style="margin-left:8px;">仅将状态为「已标注」的行推进至「待预测」</span>
+        </div>
+        {% else %}
+        <div class="form-inline" style="margin-bottom: 10px;">
+            <select id="batch_label_id" class="form-control">
+                <option value="">选择标签（批量）</option>
+                {% for lb in labels %}
+                    <option value="{{ lb.id }}">{{ lb.name }}</option>
+                {% endfor %}
+            </select>
+            <input id="batch_remark" class="form-control" placeholder="备注（可选）">
+            <button type="button" class="btn btn-success" onclick="batchAnnotate()">批量标注</button>
+        </div>
+        {% endif %}
+
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th><input type="checkbox" id="check_all"></th>
+                <th>ID</th>
+                <th>文本</th>
+                <th>当前状态</th>
+                <th>{% if status == 'labeled' %}标注结果 / 操作{% else %}单条标注{% endif %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in page_obj.object_list %}
+                <tr>
+                    <td><input type="checkbox" class="row_check" value="{{ row.id }}"></td>
+                    <td>{{ row.id }}</td>
+                    <td>
+                        <div>{{ row.content|truncatechars:90 }}</div>
+                        <a href="javascript:void(0);" class="small" onclick="showFullContent({{ row.id }})">查看全文</a>
+                        <div id="full_text_{{ row.id }}" class="hidden">{{ row.content }}</div>
+                    </td>
+                    <td>{{ row.get_status_display }}</td>
+                    <td>
+                        {% if status == 'labeled' %}
+                            {% if row.prefetched_annotations %}
+                                {% with ann=row.prefetched_annotations|first %}
+                                <div>
+                                    <strong>{% if ann.label %}{{ ann.label.name }}{% else %}（无标签）{% endif %}</strong>
+                                    {% if ann.remark %}<span class="text-muted small"> · {{ ann.remark }}</span>{% endif %}
+                                </div>
+                                <div class="small text-muted">{{ ann.created_at|date:"Y-m-d H:i" }}</div>
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">无标注记录</span>
+                            {% endif %}
+                            <div style="margin-top:6px;">
+                                <a class="btn btn-xs btn-default" href="{% url 'rawtext_detail' row.id %}">原文详情</a>
+                                {% if row.status == 'labeled' %}
+                                <button type="button" class="btn btn-xs btn-warning" onclick="singleSendPredict({{ row.id }})">送待预测</button>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                        <select id="label_{{ row.id }}" class="form-control input-sm" style="width: 200px; display: inline-block;">
+                            <option value="">选择标签</option>
+                            {% for lb in labels %}
+                                <option value="{{ lb.id }}">{{ lb.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-xs btn-primary" onclick="singleAnnotate({{ row.id }})">提交</button>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="text-center">{% if status == 'labeled' %}暂无「已标注」数据（请先在「待标注」中完成标注）{% elif status == 'pending_label' %}暂无待标注文本{% else %}暂无数据{% endif %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {% if pagination_show %}
+        <div class="admin-pager-wrap">
+            <p class="admin-pager-meta text-muted">共 {{ num_pages }} 页，当前第 {{ page_obj.number }} 页</p>
+            <nav class="admin-pager" aria-label="分页">
+                <ul class="pagination pagination-sm">
+                    <li class="pager-edge">
+                        <a href="?page=1&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">首页</a>
+                    </li>
+                    {% if pagination_merged %}
+                        {% for n in page_all %}
+                        <li class="{% if n == page_obj.number %}active{% endif %}">
+                            <a href="?page={{ n }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">{{ n }}</a>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        {% for n in page_head %}
+                        <li class="{% if n == page_obj.number %}active{% endif %}">
+                            <a href="?page={{ n }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">{{ n }}</a>
+                        </li>
+                        {% endfor %}
+                        <li class="pager-ellipsis disabled"><span>…</span></li>
+                        {% for n in page_tail %}
+                        <li class="{% if n == page_obj.number %}active{% endif %}">
+                            <a href="?page={{ n }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">{{ n }}</a>
+                        </li>
+                        {% endfor %}
+                    {% endif %}
+                    <li class="pager-edge">
+                        <a href="?page={{ num_pages }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">末页</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+function showFullContent(rawId) {
+    var el = document.getElementById('full_text_' + rawId);
+    if (!el) { return; }
+    var txt = (el.textContent || el.innerText || '').trim();
+    if (!txt) { txt = '（空文本）'; }
+    $('#fullContentBody').text(txt);
+    $('#fullContentModal').modal('show');
+}
+
+function postAnno(data) {
+    data['csrfmiddlewaretoken'] = '{{ csrf_token }}';
+    $.post("{% url 'annotation_list' %}", data, function(res){
+        alert(res.msg);
+        if (res.status === 1) location.reload();
+    }, 'json').fail(function (xhr) {
+        var msg = '请求失败';
+        if (xhr.responseJSON && xhr.responseJSON.msg) msg = xhr.responseJSON.msg;
+        else if (xhr.status === 403) msg = '无权限或登录已失效，请刷新后重试';
+        alert(msg);
+    });
+}
+
+function initBinary() { postAnno({'action': 'init_binary'}); }
+function initFour() { postAnno({'action': 'init_four'}); }
+
+function singleAnnotate(rawId) {
+    const labelId = $('#label_' + rawId).val();
+    if (!labelId) { alert('请选择标签'); return; }
+    postAnno({'action': 'single', 'raw_id': rawId, 'label_id': labelId, 'remark': ''});
+}
+
+function batchAnnotate() {
+    const ids = $('.row_check:checked').map(function(){ return $(this).val(); }).get().join(',');
+    const labelId = $('#batch_label_id').val();
+    const remark = $('#batch_remark').val();
+    if (!ids) { alert('请先选择数据'); return; }
+    if (!labelId) { alert('请选择标签'); return; }
+    postAnno({'action': 'batch', 'raw_ids': ids, 'label_id': labelId, 'remark': remark});
+}
+
+function singleSendPredict(rawId) {
+    if (!confirm('将该条送入「待预测」？')) { return; }
+    postAnno({'action': 'batch_send_predict', 'raw_ids': String(rawId)});
+}
+
+function batchSendPredict() {
+    const ids = $('.row_check:checked').map(function(){ return $(this).val(); }).get().join(',');
+    if (!ids) { alert('请先勾选要送待预测的记录'); return; }
+    if (!confirm('将勾选的「已标注」记录送入「待预测」？（非已标注行将被忽略）')) { return; }
+    postAnno({'action': 'batch_send_predict', 'raw_ids': ids});
+}
+
+$(function () {
+    $('#check_all').on('change', function(){
+        $('.row_check').prop('checked', $(this).prop('checked'));
+    });
+});
+
+{% if pagination_show %}
+(function () {
+    var maxP = {{ num_pages|default:1 }};
+    function goPage() {
+        var inp = document.getElementById('annotationPageJump');
+        if (!inp) return;
+        var p = parseInt(inp.value, 10);
+        if (isNaN(p) || p < 1) p = 1;
+        if (p > maxP) p = maxP;
+        var kw = '{{ keyword|escapejs }}';
+        var st = '{{ status|escapejs }}';
+        var q = '?page=' + p + '&keyword=' + encodeURIComponent(kw) + '&status=' + encodeURIComponent(st);
+        window.location.href = '{% url "annotation_list" %}' + q;
+    }
+    $('#annotationPageJumpBtn').on('click', goPage);
+    $('#annotationPageJump').on('keydown', function (e) {
+        if (e.keyCode === 13) { e.preventDefault(); goPage(); }
+    });
+})();
+{% endif %}
+</script>
+
+<div class="modal fade" id="fullContentModal" tabindex="-1" role="dialog" aria-labelledby="fullContentTitle">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="fullContentTitle">文本全文</h4>
+      </div>
+      <div class="modal-body">
+        <pre id="fullContentBody" style="white-space:pre-wrap;word-break:break-word;max-height:65vh;overflow:auto;background:#f8f8f8;border:1px solid #eee;padding:10px;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

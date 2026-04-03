@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ block.super }}{% endblock %}
+
+{% block css %}
+<style>
+    .card-box { border: 1px solid #eee; border-radius: 8px; background: #fff; padding: 14px; margin-bottom: 12px; }
+    .kv { margin-bottom: 8px; }
+    .kv b { display: inline-block; min-width: 120px; }
+    pre { background: #f7f7f7; border: 1px solid #e5e5e5; border-radius: 6px; padding: 10px; white-space: pre-wrap; word-break: break-all; }
+    .history-table th, .history-table td { font-size: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+    <h2>风险详情</h2>
+    <p>
+        <a class="btn btn-default btn-sm" href="{% url 'index' %}">返回首页</a>
+        <a class="btn btn-default btn-sm" href="{% url 'high_risk_list' %}">返回高风险列表</a>
+    </p>
+</div>
+
+<div class="col-sm-1"></div>
+<div class="col-sm-10">
+    <div class="card-box">
+        <h4>评论信息</h4>
+        <div class="kv"><b>评论原文</b>{{ comment.content }}</div>
+        <div class="kv"><b>用户昵称</b>{{ comment.name|default:"-" }}</div>
+        <div class="kv"><b>发布时间</b>{{ comment.time|default:"-" }}</div>
+        <div class="kv"><b>回复数</b>{{ comment.reply|default:"-" }}</div>
+        <div class="kv"><b>IP属地</b>{{ comment.loc|default:"-" }}</div>
+    </div>
+
+    <div class="card-box">
+        <h4>最新预测结果</h4>
+        {% if latest_prediction %}
+            <div class="kv"><b>predicted_label</b>{% if latest_prediction.predicted_label %}{{ latest_prediction.predicted_label.name }}{% else %}未标注{% endif %}</div>
+            <div class="kv"><b>risk_level</b>{{ latest_prediction.risk_level }}</div>
+            <div class="kv"><b>final_risk_score</b>{{ latest_prediction.final_risk_score|floatformat:6 }}</div>
+            <div class="kv"><b>hit_keywords</b>{{ latest_prediction.hit_keywords|default:"-" }}</div>
+            <div class="kv"><b>model_info</b>{% if latest_prediction.model_info %}{{ latest_prediction.model_info.name }} / {{ latest_prediction.model_info.version }}{% else %}-{% endif %}</div>
+            <div class="kv"><b>detail_json</b></div>
+            <pre>{% if detail_pretty %}{{ detail_pretty }}{% else %}-{% endif %}</pre>
+        {% else %}
+            <div class="alert alert-warning" style="margin-bottom: 8px;">当前评论暂无 PredictionResult。</div>
+            <div class="kv"><b>兼容字段 Comment.emotion</b>{{ legacy_emotion|default:"未分析" }}</div>
+        {% endif %}
+    </div>
+
+    <div class="card-box">
+        <h4>历史预测记录</h4>
+        {% if prediction_history %}
+            <table class="table table-bordered table-striped history-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>时间</th>
+                        <th>标签</th>
+                        <th>风险等级</th>
+                        <th>风险分</th>
+                        <th>关键词</th>
+                        <th>模型</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in prediction_history %}
+                    <tr>
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.created_at|date:"Y-m-d H:i:s" }}</td>
+                        <td>{% if p.predicted_label %}{{ p.predicted_label.name }}{% else %}未标注{% endif %}</td>
+                        <td>{{ p.risk_level }}</td>
+                        <td>{{ p.final_risk_score|floatformat:6 }}</td>
+                        <td>{{ p.hit_keywords|default:"-" }}</td>
+                        <td>{% if p.model_info %}{{ p.model_info.name }} / {{ p.model_info.version }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="text-muted">暂无历史预测记录。</div>
+        {% endif %}
+    </div>
+</div>
+<div class="col-sm-1"></div>
+{% endblock %}

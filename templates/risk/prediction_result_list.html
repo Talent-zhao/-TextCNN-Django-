@@ -1,0 +1,69 @@
+{% extends "admin_base.html" %}
+{% block title %}预测结果列表{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">预测结果列表</h3></div>
+    <div class="panel-body">
+        <form method="get" class="form-inline" style="margin-bottom: 12px;">
+            <select name="model_version" class="form-control">
+                <option value="">全部模型版本</option>
+                {% for v, vlabel in model_version_labels %}
+                    <option value="{{ v }}" {% if model_version == v %}selected{% endif %}>{{ vlabel }}</option>
+                {% endfor %}
+            </select>
+            <select name="risk_level" class="form-control">
+                <option value="">全部风险等级</option>
+                <option value="0" {% if risk_level == '0' %}selected{% endif %}>0</option>
+                <option value="1" {% if risk_level == '1' %}selected{% endif %}>1</option>
+                <option value="2" {% if risk_level == '2' %}selected{% endif %}>2</option>
+                <option value="3" {% if risk_level == '3' %}selected{% endif %}>3</option>
+            </select>
+            <select name="is_alert" class="form-control">
+                <option value="">是否触发预警</option>
+                <option value="1" {% if is_alert == '1' %}selected{% endif %}>是</option>
+                <option value="0" {% if is_alert == '0' %}selected{% endif %}>否</option>
+            </select>
+            <input type="date" class="form-control" name="start_time" value="{{ start_time }}">
+            <input type="date" class="form-control" name="end_time" value="{{ end_time }}">
+            <button type="submit" class="btn btn-primary">筛选</button>
+            <a class="btn btn-default" href="?model_version={{ model_version }}&risk_level={{ risk_level }}&is_alert={{ is_alert }}&start_time={{ start_time }}&end_time={{ end_time }}&export=csv">导出CSV</a>
+            <a class="btn btn-default" href="?model_version={{ model_version }}&risk_level={{ risk_level }}&is_alert={{ is_alert }}&start_time={{ start_time }}&end_time={{ end_time }}&export=json">导出JSON</a>
+        </form>
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>文本ID</th>
+                <th>模型</th>
+                <th>标签</th>
+                <th>概率分</th>
+                <th>规则分</th>
+                <th>最终风险分</th>
+                <th>触发预警</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in page_obj.object_list %}
+                <tr>
+                    <td>{{ row.id }}</td>
+                    <td>{{ row.raw_text.id }}</td>
+                    <td>{% if row.model_info %}{{ row.model_info.name }}-{{ row.model_info.version }}{% else %}-{% endif %}</td>
+                    <td>{% if row.predicted_label %}{{ row.predicted_label.name }}{% else %}-{% endif %}</td>
+                    <td>{{ row.probability_score }}</td>
+                    <td>{{ row.rule_score }}</td>
+                    <td>{{ row.final_risk_score }}</td>
+                    <td>{% if row.is_alert_triggered %}是{% else %}否{% endif %}</td>
+                    <td>{{ row.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td><a class="btn btn-xs btn-info" href="{% url 'prediction_result_detail' row.id %}">明细</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="10" class="text-center">暂无预测结果</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

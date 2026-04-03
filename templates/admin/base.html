@@ -1,0 +1,216 @@
+<!doctype html>
+{% load static %}
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}管理员系统{% endblock %}</title>
+    
+    <!-- Bootstrap core CSS -->
+    <link href="{% static 'lib/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    
+    <!-- Custom styles -->
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    <link href="{% static 'css/admin.css' %}" rel="stylesheet">
+    
+    {% block css %}{% endblock %}
+</head>
+
+<body class="admin-body">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-default admin-navbar navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                        aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="{% url 'user_mgmt_list' %}">管理员系统</a>
+            </div>
+
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav hidden-xs">
+                    <li><a href="{% url 'user_mgmt_list' %}">用户管理</a></li>
+                    <li><a href="{% url 'model_plan_list' %}">模型授权方案</a></li>
+                    <li><a href="{% url 'user_plan_list' %}">用户套餐</a></li>
+                    <li><a href="{% url 'rawtext_list' %}">数据管理</a></li>
+                    <li><a href="{% url 'annotation_list' %}">样本标注</a></li>
+                    <li><a href="{% url 'pending_predict_list' %}">待预测</a></li>
+                    <li><a href="{% url 'prediction_result_list' %}">预测结果</a></li>
+                    <li><a href="{% url 'model_list' %}">模型管理</a></li>
+                    <li><a href="{% url 'model_training' %}">模型训练</a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                           aria-expanded="false">
+                            <span class="glyphicon glyphicon-lock"></span>
+                            {% if admin %}
+                                {{ admin.username }}
+                            {% elif userinfo %}
+                                {{ userinfo.username }}
+                            {% else %}
+                                管理员
+                            {% endif %}
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{% url 'index' %}">返回前台</a></li>
+                            <li><a href="{% url 'admin_logout' %}">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主体区域 -->
+    <div class="container-fluid admin-layout">
+        <div class="row">
+            <div class="col-md-2 col-sm-3 admin-sidebar">
+                <div class="admin-userbox">
+                    <p class="name">
+                        <span class="glyphicon glyphicon-user"></span>
+                        {% if admin %}
+                            {{ admin.username }}
+                        {% elif userinfo %}
+                            {{ userinfo.username }}
+                        {% else %}
+                            管理员
+                        {% endif %}
+                    </p>
+                    <div class="meta">后台管理中心</div>
+                </div>
+                <style>
+                    .admin-menu .menu-group-title {
+                        display: block;
+                        padding: 10px 14px;
+                        color: #333;
+                        font-weight: 600;
+                        border-bottom: 1px solid #efefef;
+                        text-decoration: none;
+                        cursor: pointer;
+                    }
+                    .admin-menu .menu-group-title:hover,
+                    .admin-menu .menu-group-title:focus {
+                        text-decoration: none;
+                        background: #f8f8f8;
+                    }
+                    .admin-submenu {
+                        list-style: none;
+                        margin: 0;
+                        padding: 6px 0 8px 0;
+                        background: #fafafa;
+                        border-bottom: 1px solid #efefef;
+                    }
+                    .admin-submenu > li > a {
+                        display: block;
+                        padding: 8px 14px 8px 34px;
+                        color: #555;
+                        text-decoration: none;
+                    }
+                    .admin-submenu > li > a:hover {
+                        background: #f0f0f0;
+                        color: #333;
+                    }
+                    .admin-submenu > li.active > a {
+                        background: #e8f2ff;
+                        color: #0b63c5;
+                        font-weight: 600;
+                    }
+                </style>
+                <ul class="admin-menu" id="adminMenu">
+                    <li class="menu-group">
+                        <a class="menu-group-title" data-toggle="collapse" data-parent="#adminMenu" href="#menu-auth" aria-expanded="false">
+                            账号与权限 <span class="pull-right glyphicon glyphicon-menu-down"></span>
+                        </a>
+                        <ul class="admin-submenu collapse" id="menu-auth">
+                            <li data-path="{% url 'user_mgmt_list' %}"><a href="{% url 'user_mgmt_list' %}">用户管理</a></li>
+                            <li data-path="{% url 'model_plan_list' %}"><a href="{% url 'model_plan_list' %}">模型授权方案</a></li>
+                            <li data-path="{% url 'user_plan_list' %}"><a href="{% url 'user_plan_list' %}">用户套餐</a></li>
+                        </ul>
+                    </li>
+                    <li class="menu-group">
+                        <a class="menu-group-title" data-toggle="collapse" data-parent="#adminMenu" href="#menu-data" aria-expanded="false">
+                            数据中心 <span class="pull-right glyphicon glyphicon-menu-down"></span>
+                        </a>
+                        <ul class="admin-submenu collapse" id="menu-data">
+                            <li data-path="{% url 'rawtext_list' %}"><a href="{% url 'rawtext_list' %}">数据管理</a></li>
+                            <li data-path="{% url 'annotation_list' %}"><a href="{% url 'annotation_list' %}">样本标注</a></li>
+                            <li data-path="{% url 'pending_predict_list' %}"><a href="{% url 'pending_predict_list' %}">待预测</a></li>
+                            <li data-path="{% url 'prediction_result_list' %}"><a href="{% url 'prediction_result_list' %}">预测结果</a></li>
+                        </ul>
+                    </li>
+                    <li class="menu-group">
+                        <a class="menu-group-title" data-toggle="collapse" data-parent="#adminMenu" href="#menu-model" aria-expanded="false">
+                            模型中心 <span class="pull-right glyphicon glyphicon-menu-down"></span>
+                        </a>
+                        <ul class="admin-submenu collapse" id="menu-model">
+                            <li data-path="{% url 'model_list' %}"><a href="{% url 'model_list' %}">模型管理</a></li>
+                            <li data-path="{% url 'model_training' %}"><a href="{% url 'model_training' %}">模型训练</a></li>
+                            <li data-path="{% url 'runtime_config' %}"><a href="{% url 'runtime_config' %}">预测融合设置</a></li>
+                            <li data-path="{% url 'algorithm_compare' %}"><a href="{% url 'algorithm_compare' %}">算法对比</a></li>
+                            <li data-path="{% url 'model_evaluation' %}"><a href="{% url 'model_evaluation' %}">评估结果</a></li>
+                            <li data-path="{% url 'model_self_check' %}"><a href="{% url 'model_self_check' %}">模型自检</a></li>
+                        </ul>
+                    </li>
+                    <li class="menu-group">
+                        <a class="menu-group-title" data-toggle="collapse" data-parent="#adminMenu" href="#menu-audit" aria-expanded="false">
+                            审计中心 <span class="pull-right glyphicon glyphicon-menu-down"></span>
+                        </a>
+                        <ul class="admin-submenu collapse" id="menu-audit">
+                            <li data-path="{% url 'export_log_list' %}"><a href="{% url 'export_log_list' %}">导出日志</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-10 col-sm-9 admin-content">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible" role="alert">
+                        <button type="button" class="close" data-dismiss="alert">&times;</button>
+                        {{ message|linebreaksbr }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+   
+    
+    <!-- Bootstrap core JavaScript -->
+    <script src="{% static 'js/jquery-1.12.4.min.js' %}"></script>
+    <script src="{% static 'lib/bootstrap/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/path-picker.js' %}"></script>
+
+    <script>
+        // 左侧菜单高亮（优先匹配最长 path）
+        (function () {
+            var currentPath = "{{ request.path }}";
+            var $items = $('#adminMenu li');
+            var best = null;
+            var bestLen = -1;
+            $items.each(function () {
+                var path = $(this).attr('data-path') || '';
+                if (path && currentPath.indexOf(path) === 0 && path.length > bestLen) {
+                    best = this;
+                    bestLen = path.length;
+                }
+            });
+            if (best) {
+                $(best).addClass('active');
+                $(best).closest('.collapse').addClass('in');
+            }
+        })();
+    </script>
+
+ <!--  # 项目原作者：赵有才  # 联系方式：creepreme@126.com/ wechat: zyb1209121xty -->
+    {% block js %}{% endblock %}
+</body>
+</html>
+

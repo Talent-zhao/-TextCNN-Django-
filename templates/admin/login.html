@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>管理员登录 - 贴吧抑郁分析系统</title>
+    
+    <!-- Bootstrap 3 CSS (与管理员后台一致) -->
+    <link href="{% static 'lib/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    
+    <!-- 管理员登录专用样式 -->
+    <link rel="stylesheet" href="{% static 'css/admin-login.css' %}">
+</head>
+
+<body class="admin-login-page">
+    <div class="admin-login-container">
+        <div class="admin-login-panel">
+            <div class="admin-login-header">
+                <div class="admin-logo">
+                    <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+                </div>
+                <h1>管理员系统</h1>
+                <p>贴吧抑郁分析系统 · 后台管理</p>
+                <p class="text-muted small" style="margin-top:8px;">与前台用户登录相互独立，请使用后台账号或 Django 超级用户登录</p>
+            </div>
+            
+            <div class="admin-login-body">
+                <form method="POST" class="admin-login-form" id="adminLoginForm">
+                    {% csrf_token %}
+                    
+                    {% for message in messages %}
+                        {% if message.tags == 'error' %}
+                            <div class="alert alert-danger" role="alert">
+                                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                                {{ message }}
+                            </div>
+                        {% elif message.tags == 'success' %}
+                            <div class="alert alert-success" role="alert">
+                                <span class="glyphicon glyphicon-ok-sign" aria-hidden="true"></span>
+                                {{ message }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="form-group">
+                        <label for="username">
+                            <span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                            用户名
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="username" 
+                            name="username" 
+                            placeholder="请输入管理员用户名" 
+                            required 
+                            autofocus
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">
+                            <span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+                            密码
+                        </label>
+                        <div class="password-wrapper">
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                id="password" 
+                                name="password" 
+                                placeholder="请输入密码" 
+                                required
+                            >
+                            <button type="button" class="password-toggle-btn" onclick="togglePassword()" title="显示/隐藏密码">
+                                <span class="glyphicon glyphicon-eye-open" id="eyeIcon" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-login">
+                        <span class="glyphicon glyphicon-log-in" aria-hidden="true"></span>
+                        登 录
+                    </button>
+                </form>
+            </div>
+
+            <div class="admin-login-footer">
+                <a href="{% url 'login' %}">用户登录</a>
+                <span class="divider">|</span>
+                <a href="{% url 'index' %}">返回首页</a>
+            </div>
+        </div>
+
+        <div class="admin-login-copyright">
+            Copyright &copy; 2024 贴吧抑郁分析系统
+        </div>
+    </div>
+
+    <!-- jQuery (与管理员后台一致) -->
+    <script src="{% static 'js/jquery-1.12.4.min.js' %}"></script>
+    <script src="{% static 'lib/bootstrap/js/bootstrap.min.js' %}"></script>
+    
+    <script>
+        function togglePassword() {
+            var $pwd = $('#password');
+            var $icon = $('#eyeIcon');
+            if ($pwd.attr('type') === 'password') {
+                $pwd.attr('type', 'text');
+                $icon.removeClass('glyphicon-eye-open').addClass('glyphicon-eye-close');
+            } else {
+                $pwd.attr('type', 'password');
+                $icon.removeClass('glyphicon-eye-close').addClass('glyphicon-eye-open');
+            }
+        }
+
+        $('#adminLoginForm').on('submit', function() {
+            var $btn = $(this).find('.btn-login');
+            if ($('#username').val().trim() && $('#password').val().trim()) {
+                $btn.addClass('loading').prop('disabled', true);
+            }
+        });
+    </script>
+</body>
+</html>

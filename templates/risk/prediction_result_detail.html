@@ -1,0 +1,38 @@
+{% extends "admin_base.html" %}
+{% block title %}预测明细{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">预测明细 #{{ pred.id }}</h3></div>
+    <div class="panel-body">
+        <p><strong>原始文本：</strong></p>
+        <div class="well">{{ pred.raw_text.content }}</div>
+
+        <p><strong>清洗文本：</strong></p>
+        <div class="well">
+            {% if clean_obj %}
+                {{ clean_obj.cleaned_content }}
+            {% else %}
+                {{ detail.cleaned_text|default:"-" }}
+            {% endif %}
+        </div>
+
+        <p><strong>当前模型版本：</strong>{% if pred.model_info %}{{ pred.model_info.name }} / {{ pred.model_info.version }}{% else %}-{% endif %}</p>
+        <p><strong>SVM 输出概率：</strong>{{ detail.svm.prob|default:pred.probability_score }}</p>
+        <p><strong>TextCNN 输出概率：</strong>{{ detail.textcnn.prob|default:"0" }}</p>
+        <p><strong>规则词命中详情：</strong>{{ detail.rules.hit_words|join:", "|default:pred.hit_keywords }}</p>
+
+        <p><strong>融合权重：</strong>
+            SVM={{ detail.fusion.weights.svm|default:"-" }} /
+            TextCNN={{ detail.fusion.weights.textcnn|default:"-" }} /
+            Rules={{ detail.fusion.weights.rules|default:"-" }}
+        </p>
+        <p><strong>最终风险分：</strong>{{ pred.final_risk_score }}</p>
+        <p><strong>是否触发预警：</strong>{% if pred.is_alert_triggered %}是{% else %}否{% endif %}</p>
+        <p><strong>触发原因：</strong>{{ detail.alert.trigger_reason|default:"-" }}</p>
+        <p><strong>创建时间：</strong>{{ pred.created_at|date:"Y-m-d H:i:s" }}</p>
+
+        <a class="btn btn-default" href="{% url 'prediction_result_list' %}">返回列表</a>
+    </div>
+</div>
+{% endblock %}

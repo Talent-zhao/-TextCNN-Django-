@@ -1,0 +1,359 @@
+/* 管理员后台统一样式（Bootstrap3 基础上增强） */
+
+/* 主题色 */
+:root{
+  --admin-bg: #f5f7fb;
+  --admin-primary: #2c3e50;
+  --admin-primary-2: #34495e;
+  --admin-accent: #3498db;
+  --admin-success: #2ecc71;
+  --admin-warning: #f39c12;
+  --admin-danger: #e74c3c;
+  --admin-text: #2c3e50;
+  --admin-muted: #7f8c8d;
+  --admin-border: #e9eef5;
+  --admin-card: #ffffff;
+}
+
+body.admin-body{
+  padding-top: 60px;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+/* 路径输入：浏览按钮与打开文件夹入口 */
+.path-input-wrap .input-group-btn > .btn-path-file{
+  min-width: 42px;
+}
+.btn-open-folder-link .glyphicon{
+  margin-right: 4px;
+}
+.path-file-import-wrap .btn-file-trigger{
+  min-width: 44px;
+}
+
+/* 顶部导航 */
+.admin-navbar{
+  background: var(--admin-primary);
+  border: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,.12);
+}
+.admin-navbar .navbar-brand{
+  color: #fff !important;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+.admin-navbar .navbar-nav>li>a{
+  color: rgba(255,255,255,.92);
+  font-size: 15px;
+}
+.admin-navbar .navbar-nav>li>a:hover,
+.admin-navbar .navbar-nav>li>a:focus{
+  color: #fff;
+  background: var(--admin-primary-2);
+}
+.admin-navbar .navbar-nav>.active>a,
+.admin-navbar .navbar-nav>.active>a:hover,
+.admin-navbar .navbar-nav>.active>a:focus{
+  background: var(--admin-primary-2);
+  color: #fff;
+}
+.admin-navbar .navbar-toggle .icon-bar{
+  background: #fff;
+}
+
+/* 布局：侧边栏 + 内容 */
+.admin-layout{
+  min-height: calc(100vh - 60px);
+}
+.admin-sidebar{
+  background: #fff;
+  border-right: 1px solid var(--admin-border);
+  min-height: calc(100vh - 60px);
+  padding: 14px 12px;
+}
+/* 侧栏在纵向滚动（长列表、分页）时保持可见。
+   使用 flex 行 + align-self:flex-start，避免浮动列高度仅随侧栏内容、导致 sticky 过早失效。 */
+@media (min-width: 768px){
+  .admin-layout > .row{
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .admin-layout > .row > [class*="col-"]{
+    float: none;
+    flex: 0 0 auto;
+  }
+  .admin-sidebar{
+    position: sticky;
+    top: 60px;
+    align-self: flex-start;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+.admin-sidebar .admin-userbox{
+  padding: 12px 10px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  margin-bottom: 12px;
+}
+.admin-sidebar .admin-userbox .name{
+  font-weight: 700;
+  margin: 0;
+}
+.admin-sidebar .admin-userbox .meta{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+.admin-menu{
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-menu li{
+  margin: 6px 0;
+}
+.admin-menu a{
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--admin-text);
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.admin-menu a .glyphicon{
+  width: 18px;
+  color: var(--admin-muted);
+  margin-right: 8px;
+}
+.admin-menu a:hover{
+  background: #f2f6ff;
+  border-color: #dbe8ff;
+}
+.admin-menu li.active a{
+  background: rgba(52,152,219,.12);
+  border-color: rgba(52,152,219,.28);
+  color: var(--admin-text);
+}
+.admin-menu li.active a .glyphicon{
+  color: var(--admin-accent);
+}
+
+.admin-content{
+  padding: 18px 18px 28px;
+}
+
+/* 页面头 */
+.admin-page-header{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px 0 16px;
+}
+.admin-page-header h2{
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+.admin-page-header .sub{
+  color: var(--admin-muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* 卡片 */
+.admin-card{
+  background: var(--admin-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(20, 40, 80, 0.06);
+  margin-bottom: 16px;
+}
+.admin-card-title{
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--admin-text);
+}
+
+/* 统计卡片 */
+.admin-stat{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.admin-stat .label{
+  font-size: 13px;
+  color: var(--admin-muted);
+  font-weight: 600;
+  padding: 0;
+}
+.admin-stat .value{
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--admin-accent);
+  line-height: 1;
+}
+.admin-stat .icon{
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(52,152,219,.12);
+  color: var(--admin-accent);
+  font-size: 18px;
+}
+
+/* 表格与表单微调 */
+.admin-card .table{
+  margin-bottom: 0;
+}
+.admin-card .table>thead>tr>th{
+  background: #f7f9fc;
+  border-bottom: 1px solid var(--admin-border);
+  color: #54657a;
+  font-weight: 700;
+}
+.admin-filterbar{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.admin-filterbar .form-control{
+  border-radius: 10px;
+}
+
+/* 情感徽章（评论管理用） */
+.emotion-badge{
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+}
+.emotion-没有抑郁倾向 { background-color: #27ae60; }
+.emotion-一般抑郁倾向 { background-color: #f39c12; }
+.emotion-轻度抑郁倾向 { background-color: #e67e22; }
+.emotion-严重抑郁倾向 { background-color: #c0392b; }
+
+/* 小屏处理 */
+@media (max-width: 991px){
+  .admin-sidebar{
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--admin-border);
+  }
+}
+/* 超窄屏：恢复常规块级栅格，取消 sticky */
+@media (max-width: 767px){
+  .admin-layout > .row{
+    display: block;
+  }
+  .admin-layout > .row > [class*="col-"]{
+    flex: none;
+    float: none;
+    width: 100%;
+  }
+  .admin-sidebar{
+    position: static;
+    top: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* 数据管理等列表：首页 / 前段页码 / 跳转 / 末段页码 / 末页 */
+.admin-pager-wrap{
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--admin-border);
+}
+.admin-pager-meta{
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.admin-pager .pagination{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  gap: 2px 4px;
+}
+.admin-pager .pagination > li{
+  display: inline-block;
+  float: none;
+}
+.admin-pager .pagination > li > a,
+.admin-pager .pagination > li > span{
+  border-radius: 4px;
+  margin: 0 1px;
+  padding: 3px 8px;
+  font-size: 13px;
+}
+.admin-pager .pager-edge > a{
+  font-weight: 700;
+  color: var(--admin-accent);
+}
+.admin-pager .pager-ellipsis span{
+  border: none;
+  background: transparent;
+  color: var(--admin-muted);
+  padding: 5px 4px;
+}
+
+/* 数据管理顶栏：搜索框与页码框同高同风格 */
+.rawtext-toolbar{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.rawtext-toolbar .rawtext-toolbar-input{
+  width: 140px;
+  height: 30px;
+  padding: 4px 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.rawtext-toolbar select.rawtext-toolbar-input{
+  width: 132px;
+}
+.rawtext-toolbar .rawtext-jump-page{
+  width: 52px;
+  height: 30px;
+  padding: 4px 2px;
+  font-size: 13px;
+  text-align: center;
+}
+.rawtext-toolbar .rawtext-jump-label{
+  font-size: 12px;
+  margin: 0;
+  padding: 0 2px;
+}
+.rawtext-toolbar .rawtext-toolbar-gap{
+  display: inline-block;
+  width: 0;
+  height: 22px;
+  margin: 0 2px 0 6px;
+  border-left: 1px solid var(--admin-border);
+  vertical-align: middle;
+}
+.admin-pager .pagination > .active > a,
+.admin-pager .pagination > .active > a:hover,
+.admin-pager .pagination > .active > a:focus{
+  background: var(--admin-accent);
+  border-color: var(--admin-accent);
+}
+

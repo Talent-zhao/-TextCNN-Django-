@@ -1,0 +1,124 @@
+{% extends "admin_base.html" %}
+{% block title %}模型编辑{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">编辑模型</h3></div>
+    <div class="panel-body">
+        <p class="small text-muted">
+            源算法登记：路径与非路径参数均与 <a href="{% url 'runtime_config' %}" target="_blank">预测融合设置</a>（SystemConfig）联动——打开本页时的默认值来自当前融合配置，保存时一并写回。
+            {% if fusion_strategy_edit %}融合策略规范登记（版本 <code>default</code>）的路径与开关、权重等集中在下方 JSON；名称可改，保存融合设置不会把名称改回默认值。{% endif %}
+        </p>
+        <p class="small text-muted">
+            <a href="{% url 'model_open_folder' %}?next={{ request.get_full_path|urlencode }}&algo={{ row.model_type }}" class="btn btn-xs btn-default btn-open-folder-link">
+                <span class="glyphicon glyphicon-folder-open"></span> 打开 model 文件夹
+            </a>
+            路径均为相对项目根目录；右侧图标可从本机选文件并填入对应子目录下的 <code>文件名</code>。
+        </p>
+        {% if model_type_locked %}
+        <p class="alert alert-warning small" style="margin-bottom:12px;">
+            此为规范登记（源算法模型 / 融合策略模型），<strong>类型{% if fusion_strategy_edit %}与版本{% endif %}</strong>不可改，避免与训练或融合逻辑错位；<strong>名称可手动修改</strong>（融合策略规范登记改名后仍为「融合策略模型」类别）。可改说明、前台可见、状态及下方参数。
+        </p>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>模型名称</label>
+                <input class="form-control" name="name" value="{{ row.name|default:'' }}" required>
+            </div>
+            <div class="form-group">
+                <label>模型类型</label>
+                {% if model_type_locked %}
+                <input type="hidden" name="model_type" value="{{ row.model_type }}">
+                <select class="form-control" disabled>
+                    {% for k,v in types %}
+                        <option value="{{ k }}" {% if row.model_type == k %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <select name="model_type" class="form-control">
+                    {% for k,v in types %}
+                        <option value="{{ k }}" {% if row.model_type == k %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label>版本</label>
+                {% if fusion_strategy_edit %}
+                <input type="hidden" name="version" value="{{ row.version }}">
+                <input class="form-control" value="{{ row.version|default:'v1' }}" readonly>
+                {% else %}
+                <input class="form-control" name="version" value="{{ row.version|default:'v1' }}" required>
+                {% endif %}
+            </div>
+            {% if fusion_strategy_edit %}
+            <div class="alert alert-info small">
+                子模型文件路径、向量器/词表路径及开关、权重等均包含在下方 <strong>模型配置JSON</strong> 中，保存时与「预测融合设置」共用同一套 SystemConfig。
+            </div>
+            {% else %}
+            <div class="form-group">
+                <label>模型文件路径（SVM模型 / TextCNN权重）</label>
+                <div class="input-group path-input-wrap"
+                     data-path-prefix="{% if row.model_type == 'svm' %}model/svm/{% elif row.model_type == 'knn' %}model/knn/{% elif row.model_type == 'rf' %}model/rf/{% elif row.model_type == 'dt' %}model/dt/{% elif row.model_type == 'lr' %}model/lr/{% elif row.model_type == 'textcnn' %}model/textcnn/{% elif row.model_type == 'textrcnn' %}model/textrcnn/{% elif row.model_type == 'hf_depr_bin' %}Best_Modle/binary_depression_distilbert/{% elif row.model_type == 'hf_mh_4cls' %}Best_Modle/four_class_mental_health_bert/{% else %}model/{% endif %}"
+                     data-accept=".pkl,.joblib,.pt,.pth,.bin,.safetensors,.json,.txt">
+                    <input class="form-control" name="file_path" value="{{ form_file_path|default:'' }}" autocomplete="off">
+                    <span class="input-group-btn">
+                        <button type="button" class="btn btn-default btn-path-file" title="从本机选择文件，填入对应子目录下的文件名">
+                            <span class="glyphicon glyphicon-file"></span>
+                        </button>
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>向量器/词表路径（TFIDF向量器 / TextCNN词表）</label>
+                <div class="input-group path-input-wrap"
+                     data-path-prefix="{% if row.model_type == 'svm' %}model/svm/{% elif row.model_type == 'knn' %}model/knn/{% elif row.model_type == 'rf' %}model/rf/{% elif row.model_type == 'dt' %}model/dt/{% elif row.model_type == 'lr' %}model/lr/{% elif row.model_type == 'textcnn' %}model/textcnn/{% elif row.model_type == 'textrcnn' %}model/textrcnn/{% else %}model/{% endif %}"
+                     data-accept=".pkl,.joblib,.json,.txt">
+                    <input class="form-control" name="vectorizer_path" value="{{ form_vectorizer_path|default:'' }}" autocomplete="off">
+                    <span class="input-group-btn">
+                        <button type="button" class="btn btn-default btn-path-file" title="从本机选择文件，填入对应子目录下的文件名">
+                            <span class="glyphicon glyphicon-file"></span>
+                        </button>
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label>模型说明</label>
+                <input class="form-control" name="description" value="{{ row.description|default:'' }}">
+            </div>
+            <div class="form-group">
+                <label>模型配置JSON（可覆盖系统融合参数；与预测融合设置联动保存）</label>
+                <textarea class="form-control" rows="12" name="config_json">{{ form_config_json|default:'{}' }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>评估JSON（可选）</label>
+                {% if fusion_strategy_edit %}
+                <textarea class="form-control" rows="4" readonly>{{ row.metrics_json|default:'{}' }}</textarea>
+                <p class="help-block small text-muted">融合策略登记的评估快照在保存后由系统根据当前融合配置自动刷新。</p>
+                {% else %}
+                <textarea class="form-control" rows="3" name="metrics_json">{{ row.metrics_json|default:'{}' }}</textarea>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="checkbox-inline">
+                    <input type="checkbox" name="listed_for_users" value="on" {% if row.listed_for_users %}checked{% endif %}>
+                    前台与用户权限可见（在线预测可选、用户管理中可分配该算法类型）
+                </label>
+            </div>
+            <div class="form-group">
+                <label>状态</label>
+                <select class="form-control" name="status">
+                    <option value="ready" {% if row.status == 'ready' %}selected{% endif %}>可用</option>
+                    <option value="training" {% if row.status == 'training' %}selected{% endif %}>训练中</option>
+                    <option value="disabled" {% if row.status == 'disabled' %}selected{% endif %}>已停用</option>
+                    <option value="failed" {% if row.status == 'failed' %}selected{% endif %}>训练失败</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" type="submit">保存</button>
+            <a href="{% url 'model_list' %}" class="btn btn-default">返回</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

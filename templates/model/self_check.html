@@ -1,0 +1,50 @@
+{% extends "admin_base.html" %}
+{% block title %}模型自检{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">模型可用性自检</h3></div>
+    <div class="panel-body">
+        <p>
+            <a class="btn btn-primary" href="{% url 'model_self_check' %}?mode=active">一键检测当前启用模型</a>
+            <a class="btn btn-default" href="{% url 'model_self_check' %}?mode=all">检测全部模型</a>
+            <a class="btn btn-info" href="{% url 'model_self_check_history' %}">查看自检历史</a>
+        </p>
+
+        {% for report in reports %}
+            <div class="panel panel-{% if report.summary == 'error' %}danger{% elif report.summary == 'warning' %}warning{% else %}success{% endif %}">
+                <div class="panel-heading">
+                    <strong>
+                    {% if report.model %}
+                        {{ report.model.name }} / {{ report.model.version }} / {{ report.model.model_type_display|default:report.model.model_type }}
+                    {% else %}
+                        无模型
+                    {% endif %}
+                    </strong>
+                    <span style="margin-left:10px;">总状态：{{ report.summary }}</span>
+                </div>
+                <table class="table table-bordered">
+                    <thead><tr><th>检查项</th><th>结果级别</th><th>说明</th></tr></thead>
+                    <tbody>
+                    {% for item in report.items %}
+                        <tr>
+                            <td>{{ item.check }}</td>
+                            <td>
+                                {% if item.level == 'error' %}
+                                    <span class="label label-danger">错误</span>
+                                {% elif item.level == 'warning' %}
+                                    <span class="label label-warning">警告</span>
+                                {% else %}
+                                    <span class="label label-success">正常</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.message }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

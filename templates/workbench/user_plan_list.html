@@ -1,0 +1,34 @@
+{% extends "admin_base.html" %}
+{% block title %}用户套餐{% endblock %}
+{% block content %}
+<div class="panel panel-default">
+  <div class="panel-heading"><h3 class="panel-title">用户套餐</h3></div>
+  <div class="panel-body">
+    <p><a href="{% url 'user_plan_add' %}" class="btn btn-primary btn-sm">绑定新套餐</a></p>
+    <table class="table table-bordered table-hover">
+      <thead><tr><th>ID</th><th>用户</th><th>方案</th><th>剩余额度</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+      <tbody>
+      {% for up in rows %}
+        <tr>
+          <td>{{ up.id }}</td>
+          <td>{{ up.user.username }} ({{ up.user.id }})</td>
+          <td>{{ up.plan.name }}</td>
+          <td>{{ up.remaining_quota }}</td>
+          <td>{{ up.get_status_display }}</td>
+          <td>{{ up.created_at|date:"Y-m-d H:i:s" }}</td>
+          <td>
+            <a href="{% url 'user_plan_edit' up.id %}" class="btn btn-xs btn-info">编辑</a>
+            <form method="post" action="{% url 'user_plan_delete' up.id %}" style="display:inline;" onsubmit="return confirm('确定删除该用户套餐绑定？');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-xs btn-danger">删除</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="text-center text-muted">暂无用户套餐</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

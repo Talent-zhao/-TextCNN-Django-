@@ -1,0 +1,45 @@
+{% extends "admin_base.html" %}
+{% block title %}自检历史{% endblock %}
+
+{% block content %}
+<p>
+    <a class="btn btn-default" href="{% url 'model_self_check' %}">返回</a>
+</p>
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">模型自检历史</h3></div>
+    <div class="panel-body">
+        <p>
+            <a class="btn btn-primary" href="{% url 'model_self_check' %}?mode=active">执行当前模型自检</a>
+            <a class="btn btn-default" href="{% url 'model_self_check' %}?mode=all">执行全量模型自检</a>
+            <a class="btn btn-default" href="{% url 'model_self_check_history' %}?export=csv">导出CSV</a>
+            <a class="btn btn-default" href="{% url 'model_self_check_history' %}?export=json">导出JSON</a>
+        </p>
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>检测时间</th>
+                <th>检测模式</th>
+                <th>摘要</th>
+                <th>存在错误</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row.id }}</td>
+                    <td>{{ row.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ row.mode }}</td>
+                    <td>{{ row.summary }}</td>
+                    <td>{% if row.has_error %}是{% else %}否{% endif %}</td>
+                    <td><a class="btn btn-xs btn-info" href="{% url 'model_self_check_history_detail' row.id %}">查看明细</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="text-center">暂无自检历史</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

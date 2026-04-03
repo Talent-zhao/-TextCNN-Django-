@@ -1,0 +1,228 @@
+{% extends "admin_base.html" %}
+{% block title %}预测融合设置{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading clearfix">
+        <h3 class="panel-title pull-left">预测融合设置</h3>
+        <div class="pull-right">
+            <a href="{% url 'active_model' %}" class="btn btn-info btn-sm">当前启用模型</a>
+            <a href="{% url 'model_list' %}" class="btn btn-default btn-sm">模型管理</a>
+        </div>
+    </div>
+    <div class="panel-body">
+        {% if messages %}
+            {% for m in messages %}
+                <div class="alert alert-{% if m.level_tag == 'error' %}danger{% else %}{{ m.level_tag }}{% endif %}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="well" style="background:#f0f7ff;border-color:#c6d9f1;">
+            <h4 style="margin-top:0;">当前状态一览</h4>
+            <p class="text-muted small" style="margin-bottom:8px;">以下为数据库中<strong>当前已生效</strong>的启用模型（修改下方表单后请先点「保存设置」才会变）。</p>
+            {% if current_active %}
+            <p style="margin-bottom:4px;">
+                <strong>启用模型：</strong>
+                <span class="label label-primary">{{ current_active.get_model_type_display }}</span>
+                {{ current_active.name }} / {{ current_active.version }}
+                <span class="text-muted">id={{ current_active.id }}</span>
+            </p>
+            <p class="text-muted small" style="margin-bottom:0;">路径：<code>{{ current_active.file_path|default:"-" }}</code></p>
+            {% else %}
+            <p class="text-warning" style="margin-bottom:0;">当前没有「启用」的就绪模型，预测可能走默认基线。</p>
+            {% endif %}
+        </div>
+
+
+        <p class="lead text-muted" style="font-size:15px;margin-bottom:16px;">
+            这里配置<strong>融合策略模型</strong>：启用哪些子模型、各算法权重（比率在保存后写入模型管理中类型为融合策略模型、版本 <code>default</code> 的登记，<strong>不会修改您自定义的登记名称</strong>）与门槛，以及高级路径。「模型训练」产生<strong>源算法模型</strong>产物；实际预测仍以本页 <code>SystemConfig</code> 为准。保存后，<strong>之后产生的新预测</strong>会按新设置执行。
+        </p>
+        <p><a href="{% url 'model_training' %}" class="btn btn-default btn-sm">去训练模型</a></p>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save">
+
+            {% for sec in fusion_sections %}
+                {% if sec.id == 'paths' or sec.id == 'deep' or sec.id == 'other' %}
+            <details class="well" id="fusion-details-{{ sec.id }}" style="margin-top:18px;padding-bottom:8px;">
+                <summary style="cursor:pointer;font-size:16px;font-weight:600;outline:none;">
+                    {{ sec.title }}
+                    <span class="text-muted small" style="font-weight:normal;">（可点开）</span>
+                </summary>
+                <p class="text-muted small" style="margin-top:10px;">{{ sec.subtitle }}</p>
+                {% if sec.id == 'paths' %}
+                <p class="small" style="margin-top:8px;">
+                    <a href="{% url 'model_open_folder' %}?next={{ request.get_full_path|urlencode }}{% if current_active %}&algo={{ current_active.model_type }}{% endif %}" class="btn btn-xs btn-default btn-open-folder-link" title="在本机资源管理器中打开项目下的 model 目录（或当前启用模型的子目录）">
+                        <span class="glyphicon glyphicon-folder-open"></span> 打开 model 文件夹
+                    </a>
+                    <span class="text-muted">放入文件后，右侧图标可从本机选文件并自动填入对应子目录（如 <code>model/svm/</code>）下的 <code>文件名</code>。</span>
+                </p>
+                {% endif %}
+                {% else %}
+            <div class="well" style="margin-top:18px;background:#fafafa;">
+                <h4 style="margin-top:0;">{{ sec.title }}</h4>
+                <p class="text-muted small">{{ sec.subtitle }}</p>
+                {% endif %}
+
+                {% if sec.id == 'switch' %}
+                <div style="margin-top:12px;">
+                    {% for item in sec.items %}
+                    <div class="checkbox" style="margin-bottom:6px;">
+                        <label style="font-weight:normal;">
+                            <input type="checkbox" name="cfg_{{ item.key }}" value="1" {% if item.checked %}checked{% endif %}>
+                            <strong>{{ item.title }}</strong>
+                            {% if item.help %}
+                            <span class="text-muted"> — {{ item.help }}</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">暂无配置项</p>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="row" style="margin-top:8px;">
+                    {% for item in sec.items %}
+                    <div class="col-sm-6"
+                         style="margin-bottom:14px;{% if sec.id == 'weight' %}display:block;{% elif sec.id == 'paths' or sec.id == 'deep' %}display:none;{% endif %}"
+                         {% if sec.id == 'weight' %}data-fusion-weight-algo="{{ item.key|cut:'weight_' }}"{% endif %}
+                         {% if sec.id == 'paths' %}
+                             {% if item.key == 'tfidf_vectorizer_path' or item.key == 'svm_model_path' %}data-fusion-path-algo="svm"{% endif %}
+                             {% if item.key == 'knn_model_path' %}data-fusion-path-algo="knn"{% endif %}
+                             {% if item.key == 'rf_model_path' %}data-fusion-path-algo="rf"{% endif %}
+                             {% if item.key == 'dt_model_path' %}data-fusion-path-algo="dt"{% endif %}
+                             {% if item.key == 'lr_model_path' %}data-fusion-path-algo="lr"{% endif %}
+                             {% if item.key == 'textcnn_vocab_path' or item.key == 'textcnn_weight_path' %}data-fusion-path-algo="textcnn"{% endif %}
+                             {% if item.key == 'textrcnn_vocab_path' or item.key == 'textrcnn_weight_path' %}data-fusion-path-algo="textrcnn"{% endif %}
+                             {% if item.key == 'num2name_path' %}data-fusion-path-algo="shared"{% endif %}
+                         {% endif %}
+                         {% if sec.id == 'deep' %}
+                             {% if item.key|slice:":8" == "textcnn_" %}data-fusion-deep-algo="textcnn"{% endif %}
+                             {% if item.key|slice:":9" == "textrcnn_" %}data-fusion-deep-algo="textrcnn"{% endif %}
+                         {% endif %}>
+                        <label for="id_cfg_{{ item.key }}" style="display:block;font-weight:600;">{{ item.title }}</label>
+                        {% if item.help %}
+                        <p class="text-muted small" style="margin-bottom:4px;">{{ item.help }}</p>
+                        {% endif %}
+                        {% if item.widget == 'number' %}
+                        <input id="id_cfg_{{ item.key }}" class="form-control" type="number" step="{{ item.step|default:'1' }}"
+                               name="cfg_{{ item.key }}" value="{{ item.row.value }}"
+                               {% if item.key|slice:":10" == "threshold_" %}min="0" max="1"{% elif item.key|slice:":7" == "weight_" %}min="0" max="2"{% endif %}>
+                        {% elif sec.id == 'paths' %}
+                        <div class="input-group path-input-wrap" data-path-prefix="{{ item.path_prefix|default:'model/' }}" data-accept=".pkl,.joblib,.json,.pt,.pth,.txt,.csv,.bin">
+                            <input id="id_cfg_{{ item.key }}" class="form-control" type="text" name="cfg_{{ item.key }}" value="{{ item.row.value }}" autocomplete="off">
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-default btn-path-file" title="从本机选择文件，自动填入对应子目录下的文件名（请先将文件复制到项目对应目录或训练生成）">
+                                    <span class="glyphicon glyphicon-file"></span>
+                                </button>
+                            </span>
+                        </div>
+                        {% else %}
+                        <input id="id_cfg_{{ item.key }}" class="form-control" type="text" name="cfg_{{ item.key }}" value="{{ item.row.value }}">
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="col-sm-12"><p class="text-muted">暂无配置项</p></div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if sec.id == 'paths' or sec.id == 'deep' or sec.id == 'other' %}
+            </details>
+                {% else %}
+            </div>
+                {% endif %}
+            {% endfor %}
+
+            <p style="margin-top:24px;">
+                <button class="btn btn-primary btn-lg" type="submit">保存设置</button>
+            </p>
+        </form>
+<script>
+    (function () {
+        function syncFusionWeightVisibility() {
+            var boxes = document.querySelectorAll('input[type="checkbox"][name^="cfg_enable_"]');
+            for (var i = 0; i < boxes.length; i++) {
+                var b = boxes[i];
+                if (!b || !b.name) continue;
+                var algo = b.name.replace('cfg_enable_', '');
+                if (!algo) continue;
+                var wrap = document.querySelector('[data-fusion-weight-algo="' + algo + '"]');
+                if (!wrap) continue;
+                wrap.style.display = b.checked ? '' : 'none';
+            }
+        }
+
+        function syncFusionAdvancedVisibility() {
+            function getBoxChecked(algo) {
+                var key = 'cfg_enable_' + algo;
+                var box = document.querySelector('input[type="checkbox"][name="' + key + '"]');
+                return !!(box && box.checked);
+            }
+
+            var useSvmFamily = getBoxChecked('svm') || getBoxChecked('knn') || getBoxChecked('rf') || getBoxChecked('dt') || getBoxChecked('lr');
+            var useTextcnn = getBoxChecked('textcnn');
+            var useTextrcnn = getBoxChecked('textrcnn');
+            var showPaths = useSvmFamily || useTextcnn || useTextrcnn;
+            var showDeep = useTextcnn || useTextrcnn;
+
+            var pathsDetails = document.getElementById('fusion-details-paths');
+            if (pathsDetails) pathsDetails.style.display = showPaths ? '' : 'none';
+            var deepDetails = document.getElementById('fusion-details-deep');
+            if (deepDetails) deepDetails.style.display = showDeep ? '' : 'none';
+
+            // paths：逐项显示（未勾选的算法对应输入不显示）
+            var pathWraps = document.querySelectorAll('[data-fusion-path-algo]');
+            for (var i = 0; i < pathWraps.length; i++) {
+                var w = pathWraps[i];
+                var algo = w.getAttribute('data-fusion-path-algo') || '';
+                var visible = false;
+                if (algo === 'shared') {
+                    visible = showPaths;
+                } else if (algo === 'svm') {
+                    visible = getBoxChecked('svm');
+                } else if (algo === 'knn') {
+                    visible = getBoxChecked('knn');
+                } else if (algo === 'rf') {
+                    visible = getBoxChecked('rf');
+                } else if (algo === 'dt') {
+                    visible = getBoxChecked('dt');
+                } else if (algo === 'lr') {
+                    visible = getBoxChecked('lr');
+                } else if (algo === 'textcnn') {
+                    visible = getBoxChecked('textcnn');
+                } else if (algo === 'textrcnn') {
+                    visible = getBoxChecked('textrcnn');
+                }
+                w.style.display = visible ? '' : 'none';
+            }
+
+            // deep：逐项显示
+            var deepWraps = document.querySelectorAll('[data-fusion-deep-algo]');
+            for (var j = 0; j < deepWraps.length; j++) {
+                var dw = deepWraps[j];
+                var dalgo = dw.getAttribute('data-fusion-deep-algo') || '';
+                var dvisible = false;
+                if (dalgo === 'textcnn') dvisible = getBoxChecked('textcnn');
+                if (dalgo === 'textrcnn') dvisible = getBoxChecked('textrcnn');
+                dw.style.display = dvisible ? '' : 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            syncFusionWeightVisibility();
+            syncFusionAdvancedVisibility();
+            var boxes = document.querySelectorAll('input[type="checkbox"][name^="cfg_enable_"]');
+            for (var i = 0; i < boxes.length; i++) {
+                boxes[i].addEventListener('change', function () {
+                    syncFusionWeightVisibility();
+                    syncFusionAdvancedVisibility();
+                });
+            }
+        });
+    })();
+</script>
+    </div>
+</div>
+{% endblock %}

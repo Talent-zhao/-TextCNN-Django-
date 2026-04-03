@@ -1,0 +1,185 @@
+<!doctype html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer"/> <!--可以让img标签预加载网络图片-->
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="{% static 'img/favicon.ico' %}">
+
+    <title>{% block  title %}  {% endblock %}</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="{% static 'lib/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <link href="{% static 'assets/css/ie10-viewport-bug-workaround.css' %}" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="{% static 'assets/js/ie8-responsive-file-warning.js' %}"></script><![endif]-->
+    <script src="{% static 'assets/js/ie-emulation-modes-warning.js' %}"></script>
+    {% block  css %}  {% endblock %}
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+
+    <![endif]-->
+    <style>
+        body {
+            /*min-height: 1600px;*/
+            padding-top: 60px;
+        }
+
+        nav.navbar {
+            background-color: #0069D3;
+            margin: 0 auto;
+        }
+
+        nav #navbar ul li a {
+            color: white;
+            font-size: 16px;
+        }
+
+        nav #navbar ul li.active a {
+            background-color: #0080FF;
+        }
+
+        nav #navbar ul .open a {
+            background-color: #0080FF;
+        }
+
+        nav #navbar ul li.dropdown ul li a {
+            background-color: white;
+            color: black;
+        }
+
+        nav #navbar ul li.dropdown ul li a:hover {
+            background-color: #0080FF;
+            color: white;
+        }
+
+        .navbar-brand {
+            color: white !important;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- 菜单栏  navbar-inverse-->
+<nav class="navbar navbar-default  navbar-fixed-top" style="">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            {#            <a class="navbar-brand" href="javascript:void(0)">系统名字</a>#}
+        </div>
+
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="{% url 'index' %}">评论列表</a></li>
+                <li class="active"><a href="{% url 'scrawl' %}">爬取评论</a></li>
+                <li class="active"><a href="{% url 'predict' %}">在线预测</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">初步可视化 <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{% url 'plot1' %}">词云图</a></li>
+                        <li><a href="{% url 'plot2' %}">微博贴吧每日评论折线图</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">抑郁可视化 <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{% url 'plot3' %}">情感分类环形图</a></li>
+                        <li><a href="{% url 'plot4' %}">地域分布地图</a></li>
+                        <li><a href="{% url 'plot5' %}">用户评论数柱状图</a></li>
+                        <li><a href="{% url 'plot6' %}">用户等级数柱状图</a></li>
+                        <li><a href="{% url 'plot7' %}">评论长度和回复数散点图</a></li>
+                    </ul>
+                </li>
+
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <!--- 用户未登陆--->
+
+                <!--- 用户已经登录--->
+                {#                    <li><a href="#">Static top</a></li>#}
+                <li class=" active dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">{{ userinfo.username }} <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        {% if userinfo.role == 'admin' %}
+                        <li><a href="{% url 'admin_login' %}">后台登录（管理员）</a></li>
+                        {% endif %}
+                        <li><a href="{% url 'myProfile' %}">个人中心</a></li>
+                        <li><a href="{% url 'resetPWd' %}">修改密码</a></li>
+                        <li><a href="{% url 'role_debug' %}">角色调试</a></li>
+                        <li><a href="{% url 'logout' %}">注销</a></li>
+                    </ul>
+                </li>
+                <li><img width="50" height="50" src="/media/{{ userinfo.avatar }}" alt="..." class="img-circle"></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+
+
+<!-- 主体区域 -->
+<div class="container">
+    {% block  content %}  {% endblock %}
+</div>
+
+
+{#<!-- 页脚 -->#}
+{#<footer class="footer">#}
+{#    <div class="container">#}
+{#        <p class="text-muted">本系统权利@2024</p>#}
+{#    </div>#}
+{#</footer>#}
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="{% static 'js/jquery-1.12.4.min.js' %}"></script>
+<script>window.jQuery || document.write('<script src="{% static 'assets/js/vendor/jquery.min.js' %}"><\/script>')</script>
+<script src="{% static 'lib/bootstrap/js/bootstrap.min.js' %}"></script>
+<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+<script src="{% static 'assets/js/ie10-viewport-bug-workaround.js' %}"></script>
+
+<script>
+    //导航栏
+    var navlis = $('.nav li')
+    for (var i = 0; i < navlis.length; i++) {
+        var as = $(navlis[i]).find('a')
+        var flag = false
+        for (var j = 0; j < as.length; j++) {
+            if ($(as[j]).attr('href') == "{{ request.path }}") {
+                $(navlis[i]).addClass('active')
+                flag = true
+                break
+            }
+        }
+        if (flag == false) {
+            $(navlis[i]).removeClass('active')
+        }
+    }
+</script>
+
+{% block  js %}  {% endblock %}
+</body>
+</html>

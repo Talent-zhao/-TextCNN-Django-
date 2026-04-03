@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>登录 - 贴吧抑郁分析系统</title>
+    
+    <!-- Bootstrap 3 CSS (与主页一致) -->
+    <link href="{% static 'lib/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+    
+    <style>
+        body.auth-page {
+            background-color: #f5f5f5;
+        }
+        .agreement-box {
+            margin: 10px 0 14px;
+            font-size: 13px;
+            color: #444;
+            line-height: 1.6;
+        }
+        .agreement-confirm {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .agreement-confirm input {
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+        .agreement-doc-link {
+            color: #337ab7;
+            text-decoration: underline;
+            white-space: nowrap;
+        }
+        .agreement-doc-link:hover,
+        .agreement-doc-link:focus {
+            color: #23527c;
+        }
+        #agreementModal .modal-body {
+            color: #555;
+            font-size: 13px;
+            line-height: 1.7;
+            text-align: justify;
+        }
+    </style>
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-panel">
+            <div class="auth-panel-heading">
+                <h3 class="panel-title">
+                    <span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+                    用户登录
+                </h3>
+            </div>
+            <div class="auth-panel-body">
+                <form method="POST" id="loginForm">
+                    {% csrf_token %}
+                    
+                    <!-- 消息提示 -->
+                    {% for message in messages %}
+                        {% if message.tags == 'error' %}
+                            <div class="alert-auth alert-danger" role="alert">
+                                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                                {{ message }}
+                            </div>
+                        {% elif message.tags == 'success' %}
+                            <div class="alert-auth alert-success" role="alert">
+                                <span class="glyphicon glyphicon-ok-sign" aria-hidden="true"></span>
+                                {{ message }}
+                            </div>
+                        {% else %}
+                            <div class="alert-auth alert-info" role="alert">
+                                <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+                                {{ message }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="auth-form-group">
+                        <label for="tel">
+                            <span class="glyphicon glyphicon-phone" aria-hidden="true"></span>
+                            手机号
+                        </label>
+                        <input 
+                            type="text" 
+                            class="auth-form-control" 
+                            id="tel" 
+                            name="tel" 
+                            value="user" 
+                            placeholder="请输入手机号" 
+                            required 
+                            autofocus
+                        >
+                    </div>
+
+                    <div class="auth-form-group">
+                        <label for="password">
+                            <span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+                            密码
+                        </label>
+                        <div class="password-wrapper">
+                            <input 
+                                type="password" 
+                                class="auth-form-control" 
+                                id="password" 
+                                name="pwd" 
+                                value="123456" 
+                                placeholder="请输入密码" 
+                                required
+                            >
+                            <button type="button" class="password-toggle-btn" onclick="togglePassword()" title="显示/隐藏密码">
+                                <span class="glyphicon glyphicon-eye-open" id="eye-icon" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="agreement-box">
+                        <label class="agreement-confirm" for="agreePolicy">
+                            <input type="checkbox" id="agreePolicy" required>
+                            <span>我已阅读并同意<a href="javascript:void(0);" id="agreementDocLink" class="agreement-doc-link">《用户协议与隐私提示》</a></span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-auth-primary">
+                        <span class="glyphicon glyphicon-log-in" aria-hidden="true"></span>
+                        登录
+                    </button>
+
+                    <div class="auth-footer">
+                        还没有账号？ <a href="{% url 'register' %}">立即注册</a>
+                        <span class="text-muted"> · </span>
+                        <a href="{% url 'admin_login' %}">管理员后台登录</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="agreementModal" tabindex="-1" role="dialog" aria-labelledby="agreementModalTitle">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="关闭"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="agreementModalTitle">用户协议与隐私提示</h4>
+                </div>
+                <div class="modal-body">
+                    <p>欢迎使用本平台。在您使用本系统前，请仔细阅读以下条款。点击登录并勾选同意，即表示您已理解并接受本提示。</p>
+                    <p>为保障平台安全与服务质量，您在本系统内的<strong>登录记录、操作行为、提交或上传的文字与资料、设备与网络环境相关的必要日志信息</strong>等，
+                        可能被管理员在法律法规允许范围内用于账号安全核验、身份校验、系统运维与故障排查、风险识别与处置、违规行为调查与处理、以及产品与服务的改进与优化。</p>
+                    <p>我们将依法采取合理可行的安全保护措施，防止未经授权的访问、使用或披露。除法律法规规定、司法机关或行政主管部门依法要求的情形外，
+                        未经您授权，我们不会将上述信息用于与提供本平台服务无关的商业目的。</p>
+                    <p>您应保证所提供信息的真实性与合法性，并妥善保管账号与密码。因您自身原因导致的账号泄露或损失，将在法律允许的范围内由您自行承担相应责任。</p>
+                    <p>本提示未尽事项，以国家相关法律法规及平台后续公布的规则为准。如您不同意上述内容，请停止使用本系统相关功能。</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">我已知晓</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery (与主页一致) -->
+    <script src="{% static 'js/jquery-1.12.4.min.js' %}"></script>
+    <!-- Bootstrap 3 JS -->
+    <script src="{% static 'lib/bootstrap/js/bootstrap.min.js' %}"></script>
+    
+    <script>
+        // 密码显示/隐藏切换
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.className = 'glyphicon glyphicon-eye-close';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.className = 'glyphicon glyphicon-eye-open';
+            }
+        }
+
+        // 表单验证和提交
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const tel = document.getElementById('tel').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const agreePolicy = document.getElementById('agreePolicy');
+            
+            if (!tel || !password) {
+                e.preventDefault();
+                alert('请填写完整的登录信息');
+                return false;
+            }
+
+            if (!agreePolicy.checked) {
+                e.preventDefault();
+                alert('请先阅读并同意《用户协议与隐私提示》');
+                return false;
+            }
+            
+            // 显示加载状态
+            const submitBtn = this.querySelector('.btn-auth-primary');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+        });
+
+        // 输入框聚焦效果
+        document.querySelectorAll('.auth-form-control').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                if (!this.value) {
+                    this.parentElement.classList.remove('focused');
+                }
+            });
+        });
+
+        // 协议链接点击显示弹窗
+        document.getElementById('agreementDocLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#agreementModal').modal('show');
+        });
+    </script>
+</body>
+</html>

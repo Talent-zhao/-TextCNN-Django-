@@ -1,0 +1,136 @@
+{% extends "admin_base.html" %}
+{% block title %}当前启用模型{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading clearfix">
+        <h3 class="panel-title pull-left">当前启用模型与生效配置</h3>
+        <a href="{% url 'runtime_config' %}" class="btn btn-primary btn-sm pull-right">预测融合设置</a>
+    </div>
+    <div class="panel-body">
+        {% if messages %}
+            {% for m in messages %}
+                <div class="alert alert-{% if m.level_tag == 'error' %}danger{% else %}{{ m.level_tag }}{% endif %}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+
+        {% if active %}
+        <div class="well" style="background:#f5fff8;border-color:#d6e9d6;">
+            <div class="row">
+                <div class="col-sm-8">
+                    <h4 style="margin-top:0;">{{ active.name }} <small class="text-muted">/ {{ active.version }}</small></h4>
+                    <p style="margin-bottom:6px;">
+                        <span class="label label-success">{{ active.get_model_type_display }}</span>
+                        <span class="text-muted">数据库 ID：{{ active.id }}</span>
+                    </p>
+                    <p><strong>模型文件：</strong><code>{{ active.file_path|default:"-" }}</code></p>
+                    <p><strong>向量器/词表：</strong><code>{{ active.vectorizer_path|default:"-" }}</code></p>
+                    <p><strong>说明：</strong>{{ active.description|default:"—" }}</p>
+                </div>
+                <div class="col-sm-4 text-right">
+                    <a href="{% url 'model_list' %}" class="btn btn-default btn-sm">在模型列表中切换启用</a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <strong>当前没有启用的就绪模型。</strong>请到「模型管理」启用一条记录，或检查是否仅有未就绪条目。
+        </div>
+        {% endif %}
+
+        <h4 style="margin-top:24px;">生效中的融合与阈值（摘要）</h4>
+        <p class="text-muted small">以下为根据当前启用模型类型合并后的<strong>实际参与预测</strong>的配置摘要；完整键值见下方折叠区。</p>
+
+        {% for sec in summary_sections %}
+        <div style="margin-bottom:16px;">
+            <h5 style="border-bottom:1px solid #eee;padding-bottom:4px;">{{ sec.title }}</h5>
+            {% if sec.kind == 'tags' %}
+                {% if sec.items %}
+                <p>
+                    {% for t in sec.items %}
+                    <span class="label label-info" style="margin-right:4px;margin-bottom:4px;display:inline-block;">{{ t }}</span>
+                    {% endfor %}
+                </p>
+                {% else %}
+                <p class="text-muted">无（请检查「预测融合设置」中的开关）</p>
+                {% endif %}
+            {% else %}
+            <table class="table table-bordered table-condensed" style="max-width:520px;">
+                <tbody>
+                {% for row in sec.items %}
+                <tr><td style="width:45%;">{{ row.label }}</td><td><strong>{{ row.value }}</strong></td></tr>
+                {% empty %}
+                <tr><td colspan="2" class="text-muted">—</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <details style="margin-top:16px;">
+            <summary style="cursor:pointer;font-weight:600;">查看完整运行配置键值（调试）</summary>
+            <table class="table table-bordered table-condensed" style="margin-top:10px;font-size:12px;">
+                <thead><tr><th>键</th><th>值</th></tr></thead>
+                <tbody>
+                {% for k, v in runtime_cfg.items %}
+                    <tr><td><code>{{ k }}</code></td><td>{{ v }}</td></tr>
+                {% empty %}
+                    <tr><td colspan="2" class="text-muted">无</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </details>
+
+        <hr>
+        <h4>配置快照</h4>
+        <p class="text-muted small">与「预测融合设置」页共用同一套快照；在此也可一键恢复，保存后返回本页即可看到摘要变化。</p>
+
+        {% if auto_preset %}
+        <p class="small">自动快照：{{ auto_preset.updated_at|date:"Y-m-d H:i:s" }}</p>
+        <form method="post" action="{% url 'runtime_config' %}" style="display:inline-block;margin-right:8px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="apply_preset">
+            <input type="hidden" name="preset_id" value="{{ auto_preset.id }}">
+            <input type="hidden" name="apply_active_model" value="1">
+            <input type="hidden" name="next" value="active">
+            <button type="submit" class="btn btn-success btn-sm">应用自动快照（含启用模型）</button>
+        </form>
+        <form method="post" action="{% url 'runtime_config' %}" style="display:inline-block;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="apply_preset">
+            <input type="hidden" name="preset_id" value="{{ auto_preset.id }}">
+            <input type="hidden" name="next" value="active">
+            <button type="submit" class="btn btn-default btn-sm">仅恢复融合参数</button>
+        </form>
+        {% else %}
+        <p class="text-muted small">尚无自动快照，请先在「预测融合设置」中保存一次。</p>
+        {% endif %}
+
+        {% if named_presets %}
+        <h5 style="margin-top:20px;">命名方案</h5>
+        <ul class="list-group">
+            {% for p in named_presets %}
+            <li class="list-group-item clearfix">
+                <div class="pull-left">
+                    <strong>{{ p.name }}</strong>
+                    {% if p.remark %}<br><small class="text-muted">{{ p.remark }}</small>{% endif %}
+                    <br><small class="text-muted">{{ p.updated_at|date:"Y-m-d H:i" }}</small>
+                </div>
+                <div class="pull-right">
+                    <form method="post" action="{% url 'runtime_config' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="apply_preset">
+                        <input type="hidden" name="preset_id" value="{{ p.id }}">
+                        <input type="hidden" name="apply_active_model" value="1">
+                        <input type="hidden" name="next" value="active">
+                        <button type="submit" class="btn btn-xs btn-success">应用</button>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

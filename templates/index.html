@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}  {{ block.super }}   {% endblock %}
+
+{% block css %}
+
+    <link rel="stylesheet" href="/static/css/main-news.css">
+    <link rel="stylesheet" href="/static/lib/layui/css/layui.css">
+    <style>
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="jumbotron">
+        <h1>面向社交媒体数据的抑郁检测与分析 </h1>
+
+        <p></p>
+        {#        <p>#}
+        {#            <a class="btn btn-lg btn-primary" href="../../components/#navbar" role="button">View navbar docs &raquo;</a>#}
+        {#        </p>#}
+    </div>
+    <div class="col-sm-1">
+
+    </div>
+    <div class="col-sm-10">
+        <div class="post-list">
+            {% for foo in data_list %}
+                <div class="post-list-item">
+                <div class="col-xs-5">
+                    <img class="post-object" src="{{ foo.img }}">
+                </div>
+                <div class="col-xs-7">
+                    <a href="">
+                        <div class="post-heading">{{ foo.content }}</div>
+                    </a>
+                    <!-- <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Consequuntur aut doloribus optio
+                        eligendi id expedita recusandae...</p> -->
+                    <p class="text-muted">
+                        <span>
+                            <img class="avatar" src="/static/img/004.jpg">
+                        {{ foo.name }}
+                        </span> ⋅
+                        <span>
+                        {{ foo.reply }}回复
+                        </span> ⋅
+                        <span>
+                        {{ foo.time }}⋅
+                        </span>
+                        <span style="color: red;font-weight: bolder;font-size: 16px;margin-left: 20px">
+                            {{ foo.predicted_label_name }}
+                        </span>
+                        {% if foo.prediction_risk_level != '' %}
+                        <span style="color: #ff9900;font-size: 12px;margin-left: 8px">
+                            风险等级：{{ foo.prediction_risk_level }}
+                        </span>
+                        {% endif %}
+                        {% if foo.prediction_final_score is not None %}
+                        <span style="color: #666;font-size: 12px;margin-left: 8px">
+                            风险分：{{ foo.prediction_final_score|floatformat:3 }}
+                        </span>
+                        {% endif %}
+                        {% if foo.prediction_hit_keywords %}
+                        <span style="color: #999;font-size: 12px;margin-left: 8px">
+                            关键词：{{ foo.prediction_hit_keywords }}
+                        </span>
+                        {% endif %}
+                        {% if foo.prediction_model_name %}
+                        <span style="color: #999;font-size: 12px;margin-left: 8px">
+                            模型：{{ foo.prediction_model_name }}{% if foo.prediction_model_version %} / {{ foo.prediction_model_version }}{% endif %}
+                        </span>
+                        {% endif %}
+                        <span style="margin-left: 8px;">
+                            <a href="{% url 'risk_detail' foo.id %}">详情</a>
+                        </span>
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <!--分页-->
+        <div style="margin: 10px auto;width: 500px" id="laypage"/>
+    </div>
+    <div class="col-sm-1">
+
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    <!--  分页 -->
+    <script src="/static/lib/layui/layui.js"></script>
+    <script>
+        layui.use(['laypage'], function () {
+            var laypage = layui.laypage;
+            //执行一个laypage实例
+            laypage.render({
+                elem: 'laypage' //注意，这里的 test1 是 ID，不用加 # 号
+                , count: {{ total | safe }} //数据总数，从服务端得到
+                , curr: {{ pagenum | safe }}
+                , limit:{{ pageSize |safe }}
+                , jump: function (obj, first) {
+                    //obj包含了当前分页的所有参数，比如：
+                    console.log(obj.curr); //得到当前页，以便向服务端请求对应页的数据。
+                    console.log(obj.limit); //得到每页显示的条数
+                    //首次不执行
+                    if (!first) {
+                        //do something
+                        location.href = "{% url 'index' %}" + '?pagenum=' + obj.curr
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends "admin_base.html" %}
+{% block title %}数据管理{% endblock %}
+
+{% block content %}
+<div class="panel panel-default" id="rawtext-import">
+    <div class="panel-heading">
+        <h3 class="panel-title">导入文本数据（CSV / JSON）</h3>
+    </div>
+    <div class="panel-body">
+        <p class="small text-muted" style="margin-bottom:12px;">
+            <a href="{% url 'model_training_open_folder' %}?subset=zh&next={{ request.get_full_path|urlencode }}" class="btn btn-xs btn-default btn-open-folder-link" title="打开 datasets/depression_nlp/zh">
+                <span class="glyphicon glyphicon-folder-open"></span> 打开 zh
+            </a>
+            <a href="{% url 'model_training_open_folder' %}?subset=en&next={{ request.get_full_path|urlencode }}" class="btn btn-xs btn-default btn-open-folder-link" title="打开 datasets/depression_nlp/en">
+                <span class="glyphicon glyphicon-folder-open"></span> 打开 en
+            </a>
+            <a href="{% url 'model_training_open_folder' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-xs btn-default btn-open-folder-link" title="训练数据根目录">
+                <span class="glyphicon glyphicon-folder-open"></span> 数据根目录
+            </a>
+            上传导入与下方列表在同一页；大文件也可放入项目目录后自行复制路径使用。训练数据默认在 <code>datasets/depression_nlp</code>。
+        </p>
+        <form method="post" enctype="multipart/form-data" action="{% url 'rawtext_list' %}" class="form-inline path-file-import-wrap">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="import">
+            <div class="form-group">
+                <label>选择文件：</label>
+                <div class="input-group" style="max-width:520px;">
+                    <span class="input-group-btn">
+                        <button type="button" class="btn btn-default btn-file-trigger" onclick="document.getElementById('rawtext_import_file').click();" title="打开文件选择框">
+                            <span class="glyphicon glyphicon-file"></span>
+                        </button>
+                    </span>
+                    <input type="text" class="form-control" id="rawtext_import_file_label" readonly placeholder="未选择文件…" style="background:#fff;">
+                </div>
+                <input type="file" name="import_file" id="rawtext_import_file" class="hidden" accept=".csv,.json" required style="position:absolute;left:-2000px;width:1px;height:1px;opacity:0;">
+            </div>
+            <div class="checkbox" style="margin:8px 0 0 0;">
+                <label>
+                    <input type="checkbox" name="import_direct_predict" value="1">
+                    跳过人工标注：导入后自动规则清洗并进入<strong>待预测</strong>（不经样本标注页，不产生人工标注记录）
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:8px;">开始导入</button>
+        </form>
+        <p class="help-block small" style="margin-top:10px;margin-bottom:0;">
+            CSV 表头建议含 <code>content</code> 或 <code>text</code>（训练集 <code>text,label</code> 仅文本会导入，label 不写入 RawText）；可选 <code>id</code>/<code>external_id</code>、<code>name</code>/<code>author</code>、<code>time</code>/<code>publish_time</code>。JSON 为对象数组或 <code>{"data":[...]}</code>。重复正文（哈希去重）会跳过。编码支持 UTF-8（含 BOM）与 GBK。不勾选「跳过人工标注」时，新增行停留在「未清洗」，可用「批量清洗」进入待标注流程。
+        </p>
+        <script>
+        (function(){
+            var f = document.getElementById('rawtext_import_file');
+            var t = document.getElementById('rawtext_import_file_label');
+            if (f && t) f.addEventListener('change', function(){ t.value = (f.files && f.files[0]) ? f.files[0].name : ''; });
+        })();
+        </script>
+    </div>
+</div>
+
+<div class="panel panel-default" id="rawtextListPanel">
+    <div class="panel-heading">
+        <h3 class="panel-title">RawText 列表</h3>
+    </div>
+    <div class="panel-body">
+        <form method="get" class="form-inline rawtext-toolbar" id="rawtextFilterForm">
+            <input type="text" name="keyword" value="{{ keyword }}" class="form-control input-sm rawtext-toolbar-input" placeholder="按内容搜索">
+            <select name="status" class="form-control input-sm rawtext-toolbar-input">
+                <option value="">全部状态</option>
+                {% for k,v in status_choices %}
+                    <option value="{{ k }}" {% if status == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">查询</button>
+            <button type="button" class="btn btn-warning btn-sm" onclick="dedup()">一键去重</button>
+            <button type="button" class="btn btn-success btn-sm" title="对全部为「未清洗」的记录规则清洗，进入「待标注」（表示已清洗完成）" onclick="batchClean()">批量清洗</button>
+            <span class="rawtext-toolbar-gap"></span>
+            <button type="button" class="btn btn-danger btn-sm" id="rawtextBatchToggleBtn" title="展开勾选列，删除选中或全部数据" onclick="toggleRawtextBatchMode()">删除</button>
+            <span id="rawtextBatchActions" class="hidden">
+                <button type="button" class="btn btn-danger btn-sm" title="删除当前页已勾选记录" onclick="batchDeleteSelected()">删除选中</button>
+                <button type="button" class="btn btn-danger btn-sm" title="清空库中全部 RawText" onclick="deleteAllRawtext()">删除全部</button>
+            </span>
+            {% if pagination_show %}
+            <span class="rawtext-toolbar-gap"></span>
+            <span class="rawtext-jump-label text-muted">跳转</span>
+            <input type="number" class="form-control input-sm rawtext-jump-page" id="rawtextPageJump" min="1" max="{{ num_pages }}"
+                   value="{{ page_obj.number }}" title="页码">
+            <button type="button" class="btn btn-default btn-sm" id="rawtextPageJumpBtn">GO</button>
+            {% endif %}
+        </form>
+
+        <p id="rawtextBatchHelp" class="help-block small text-muted hidden" style="margin-bottom:10px;">已开启删除模式：勾选列仅作用于<strong>当前页</strong>；「删除全部」会清空库中所有文本数据及关联清洗、标注、预测记录。</p>
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th class="rawtext-batch-col hidden" style="width:36px;"><input type="checkbox" id="rawtext_check_all" title="全选本页"></th>
+                <th>ID</th>
+                <th>来源</th>
+                <th>作者</th>
+                <th>文本</th>
+                <th>状态</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in page_obj.object_list %}
+                <tr>
+                    <td class="rawtext-batch-col hidden"><input type="checkbox" class="rawtext_row_check" value="{{ row.id }}"></td>
+                    <td>{{ row.id }}</td>
+                    <td>{% if row.source %}{{ row.source.name }}{% else %}-{% endif %}</td>
+                    <td>{{ row.author_name|default:"-" }}</td>
+                    <td>{{ row.content|truncatechars:50 }}</td>
+                    <td>{{ row.get_status_display }}</td>
+                    <td>{{ row.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <a class="btn btn-xs btn-info" href="{% url 'rawtext_detail' row.id %}">详情</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="text-center">暂无数据</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {% if pagination_show %}
+        <div class="admin-pager-wrap">
+            <p class="admin-pager-meta text-muted">共 {{ num_pages }} 页，当前第 {{ page_obj.number }} 页</p>
+            <nav class="admin-pager" aria-label="分页">
+                <ul class="pagination pagination-sm">
+                    <li class="pager-edge">
+                        <a href="?page=1&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">首页</a>
+                    </li>
+                    {% if pagination_merged %}
+                        {% for n in page_all %}
+                        <li class="{% if n == page_obj.number %}active{% endif %}">
+                            <a href="?page={{ n }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">{{ n }}</a>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        {% for n in page_head %}
+                        <li class="{% if n == page_obj.number %}active{% endif %}">
+                            <a href="?page={{ n }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">{{ n }}</a>
+                        </li>
+                        {% endfor %}
+                        <li class="pager-ellipsis disabled"><span>…</span></li>
+                        {% for n in page_tail %}
+                        <li class="{% if n == page_obj.number %}active{% endif %}">
+                            <a href="?page={{ n }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">{{ n }}</a>
+                        </li>
+                        {% endfor %}
+                    {% endif %}
+                    <li class="pager-edge">
+                        <a href="?page={{ num_pages }}&keyword={{ keyword|urlencode }}&status={{ status|urlencode }}">末页</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+{% if focus_import %}
+(function () {
+    if (location.hash !== '#rawtext-import') {
+        location.hash = 'rawtext-import';
+    }
+    var el = document.getElementById('rawtext-import');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+})();
+{% endif %}
+function postAction(data, callback) {
+    data['csrfmiddlewaretoken'] = '{{ csrf_token }}';
+    $.post("{% url 'rawtext_list' %}", data, function(res){
+        alert(res.msg);
+        if (res.status === 1 && callback) callback();
+        if (res.status === 1 && !callback) location.reload();
+    }, 'json').fail(function (xhr) {
+        var msg = '请求失败';
+        try {
+            var j = JSON.parse(xhr.responseText);
+            if (j.msg) msg = j.msg;
+        } catch (e) {}
+        alert(msg);
+    });
+}
+
+function dedup() {
+    postAction({'action': 'dedup'});
+}
+
+function batchClean() {
+    if (!confirm('将对库中全部「未清洗」记录：写入规则清洗结果（CleanText），并进入「待标注」状态（表示已清洗完成）。是否继续？')) {
+        return;
+    }
+    postAction({'action': 'batch_clean'});
+}
+
+function rawtextBatchModeOn() {
+    return $('#rawtextListPanel').hasClass('rawtext-batch-mode');
+}
+
+function toggleRawtextBatchMode() {
+    var on = !rawtextBatchModeOn();
+    $('#rawtextListPanel').toggleClass('rawtext-batch-mode', on);
+    $('.rawtext-batch-col').toggleClass('hidden', !on);
+    $('#rawtextBatchActions').toggleClass('hidden', !on);
+    $('#rawtextBatchHelp').toggleClass('hidden', !on);
+    $('#rawtextBatchToggleBtn').text(on ? '取消' : '删除');
+    if (!on) {
+        $('.rawtext_row_check').prop('checked', false);
+        $('#rawtext_check_all').prop('checked', false);
+    }
+}
+
+$(function () {
+    $('#rawtext_check_all').on('change', function () {
+        $('.rawtext_row_check').prop('checked', $(this).prop('checked'));
+    });
+});
+
+function batchDeleteSelected() {
+    var ids = $('.rawtext_row_check:checked').map(function () { return $(this).val(); }).get().join(',');
+    if (!ids) {
+        alert('请先勾选要删除的记录（可点表头复选框全选本页）');
+        return;
+    }
+    var n = ids.split(',').length;
+    if (!confirm('确定删除选中的 ' + n + ' 条 RawText？关联的清洗、标注、预测等将一并删除，不可恢复。')) {
+        return;
+    }
+    postAction({ action: 'batch_delete', raw_ids: ids });
+}
+
+function deleteAllRawtext() {
+    if (!confirm('危险操作：将删除库中「全部」RawText 及关联清洗、标注、预测等数据，不可恢复！确定继续？')) {
+        return;
+    }
+    if (!confirm('再次确认：真的要清空全部文本数据吗？')) {
+        return;
+    }
+    postAction({ action: 'delete_all_rawtext' });
+}
+
+{% if pagination_show %}
+(function () {
+    var maxP = {{ num_pages|default:1 }};
+    function goPage() {
+        var inp = document.getElementById('rawtextPageJump');
+        if (!inp) return;
+        var p = parseInt(inp.value, 10);
+        if (isNaN(p) || p < 1) p = 1;
+        if (p > maxP) p = maxP;
+        var kw = '{{ keyword|escapejs }}';
+        var st = '{{ status|escapejs }}';
+        var q = '?page=' + p + '&keyword=' + encodeURIComponent(kw) + '&status=' + encodeURIComponent(st);
+        window.location.href = '{% url "rawtext_list" %}' + q;
+    }
+    $('#rawtextPageJumpBtn').on('click', goPage);
+    $('#rawtextPageJump').on('keydown', function (e) {
+        if (e.keyCode === 13) { e.preventDefault(); goPage(); }
+    });
+})();
+{% endif %}
+</script>
+{% endblock %}

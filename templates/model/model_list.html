@@ -1,0 +1,173 @@
+{% extends "admin_base.html" %}
+{% block title %}模型管理{% endblock %}
+
+{% block content %}
+<style>
+    #db-model-registry { scroll-margin-top: 5rem; }
+    tr.model-reg-row { scroll-margin-top: 5rem; }
+</style>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">模型管理</h3>
+    </div>
+    <div class="panel-body">
+        {% if messages %}
+            {% for m in messages %}
+                <div class="alert alert-{% if m.level_tag == 'error' %}danger{% else %}{{ m.level_tag }}{% endif %}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <p class="text-muted">
+            训练产物位于项目 <code>{{ model_dir_rel }}/</code>；在线预测实际使用的路径以
+            <a href="{% url 'runtime_config' %}">预测融合设置</a> 为准。下表为当前磁盘上的文件；若数据库中有登记记录，可用于「启用」等扩展能力。
+        </p>
+        <p>
+            <a href="{% url 'model_training' %}" class="btn btn-warning">模型训练</a>
+            <a href="{% url 'runtime_config' %}" class="btn btn-primary">预测融合设置</a>
+            <a href="{% url 'active_model' %}" class="btn btn-default">当前启用模型</a>
+            <a href="{% url 'model_open_folder' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-default btn-open-folder-link" title="在本机打开项目 model 目录">
+                <span class="glyphicon glyphicon-folder-open"></span> 打开 model 文件夹
+            </a>
+        </p>
+        {% if active %}
+            <div class="alert alert-success">当前启用（数据库登记）：{{ active.name }} / {{ active.version }} / {{ active.get_model_type_display }}</div>
+        {% endif %}
+
+        <h4 style="margin-top:1.25em;">训练产物（<code>{{ model_dir_rel }}/</code>）</h4>
+        <p class="text-muted small">
+            由「模型训练」或脚本写入；可复制「相对路径」到融合配置。会递归扫描 <code>model/</code> 下的算法子目录与 <code>legacy/</code>。
+            <strong>训练次数</strong>在每次训练<strong>成功保存</strong>后自动 +1；<strong>最高召回率、最近损失</strong>由训练写入。历史文件需训练一次后才有自动指标。
+            召回率为验证集 <code>macro avg</code>；损失对 Torch 为末轮训练集平均交叉熵，传统 ML 无此项则显示「—」。
+        </p>
+        <div class="table-responsive">
+        <table class="table table-bordered table-hover table-condensed" style="min-width:920px;">
+            <thead>
+            <tr>
+                <th>相对路径</th>
+                <th>大小</th>
+                <th>磁盘修改时间</th>
+                <th>训练次数</th>
+                <th>最高召回率<br><span class="small text-muted">(macro)</span></th>
+                <th>最近损失</th>
+                <th style="min-width:280px;">最近训练记录</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for f in model_disk_files %}
+                <tr>
+                    <td><code title="{% if f.last_csv %}数据：{{ f.last_csv }}{% else %}无登记{% endif %}">{{ f.rel }}</code></td>
+                    <td>{{ f.size|filesizeformat }}</td>
+                    <td>{{ f.mtime_display }}</td>
+                    <td>{{ f.train_count }}</td>
+                    <td>{% if f.best_recall_display %}{{ f.best_recall_display }}{% else %}—{% endif %}</td>
+                    <td>{% if f.last_loss_display %}{{ f.last_loss_display }}{% else %}—{% endif %}</td>
+                    <td class="small" style="word-break:break-all;white-space:normal;max-width:420px;">
+                        {% if f.last_train_at %}
+                            {{ f.last_train_at }}
+                            {% if f.last_algo %}<br><span class="text-muted">算法：{{ f.last_algo }}</span>{% endif %}
+                            {% if f.last_csv %}<br><span class="text-muted">CSV：</span><code style="font-size:11px;word-break:break-all;">{{ f.last_csv }}</code>{% endif %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="text-center text-muted">该目录下暂无文件；完成训练后将出现 .pkl、.json、.pt 等</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+        <h4 id="db-model-registry" style="margin-top:1.75em;">数据库中的模型登记</h4>
+        <p class="text-muted small">
+            <strong>登记类别</strong>：<strong>源算法模型</strong>对应「模型训练」所选基础算法；<strong>融合策略模型</strong>对应类型为「融合策略模型」且版本为 <code>default</code> 的登记（名称可自定义，如「融合策略002」），汇总多算法路径与<strong>启用/权重及归一化比率</strong>；保存融合页或应用快照时会更新<strong>所有</strong>该类登记行的快照且<strong>不会改名</strong>。
+            <strong>路径来源</strong>：该条内各子模型路径快照与
+            <a href="{% url 'runtime_config' %}">预测融合设置</a>
+            →「高级 · 模型文件路径」<strong>一致</strong>。
+            可选补充登记不影响通过融合配置实际加载 <code>model/</code> 文件。仅支持编辑已有记录，不提供手动员增入口。
+            <strong>训练侧</strong>：训练成功写盘后可能按 macro F1 更新<strong>源算法模型</strong>行路径；之后在融合页保存一次，<strong>融合策略模型</strong>单条登记会按当前融合配置重写快照。
+            <strong>前台可见</strong>：勾选后该条登记会出现在前台「在线预测」列表与用户算法授权；与<strong>启用</strong>（全局默认）无关。
+        </p>
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>登记类别</th>
+                <th>名称</th>
+                <th>类型</th>
+                <th>版本</th>
+                <th>文件路径</th>
+                <th>状态</th>
+                <th>启用<br><span class="small text-muted">全局默认</span></th>
+                <th>前台可见</th>
+                <th style="min-width:200px;">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in rows_display %}
+                {% with row=item.row %}
+                <tr id="model-reg-{{ row.id }}" class="model-reg-row">
+                    <td>{{ row.id }}</td>
+                    <td><span class="label label-{% if item.registry_label == '融合策略模型' %}primary{% elif item.registry_label == '源算法模型' %}warning{% else %}default{% endif %}">{{ item.registry_label }}</span></td>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.get_model_type_display }}</td>
+                    <td>{{ row.version }}</td>
+                    <td class="small" style="max-width:460px;white-space:normal;word-break:break-word;">
+                        {% if item.fusion_strategy_summary %}
+                            <span class="text-muted">多算法一条登记</span><br>
+                            {{ item.fusion_strategy_summary|linebreaksbr }}
+                        {% else %}
+                            {{ row.file_path|default:"-" }}
+                        {% endif %}
+                    </td>
+                    <td>{{ row.get_status_display }}</td>
+                    <td>{% if row.is_active %}是{% else %}否{% endif %}</td>
+                    <td>{% if row.listed_for_users %}是{% else %}否{% endif %}</td>
+                    <td>
+                        <a href="{% url 'model_edit' row.id %}" class="btn btn-xs btn-info">编辑</a>
+                        <form method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="model_id" value="{{ row.id }}">
+                            {% if row.is_active %}
+                                <button class="btn btn-xs btn-warning" name="action" value="disable">停用</button>
+                            {% else %}
+                                <button class="btn btn-xs btn-success" name="action" value="enable">启用</button>
+                            {% endif %}
+                        </form>
+                        <form method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="model_id" value="{{ row.id }}">
+                            {% if row.listed_for_users %}
+                                <button class="btn btn-xs btn-default" name="action" value="listed_hide" title="从前台与用户权限勾选列表中隐藏">关闭前台</button>
+                            {% else %}
+                                <button class="btn btn-xs btn-primary" name="action" value="listed_show" title="在前台与用户管理中开放">开放前台</button>
+                            {% endif %}
+                        </form>
+                        <form method="post" style="display: inline;" onsubmit="return confirm('确定删除该条模型登记「{{ row.name }} / {{ row.version }}」？\n关联的「模型评估」记录会被删除，磁盘上的模型文件不会自动删除。');">
+                            {% csrf_token %}
+                            <input type="hidden" name="model_id" value="{{ row.id }}">
+                            <button type="submit" class="btn btn-xs btn-danger" name="action" value="delete" title="从数据库移除该登记">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endwith %}
+            {% empty %}
+                <tr><td colspan="10" class="text-center text-muted">暂无登记记录</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+(function () {
+    var hash = window.location.hash;
+    if (!hash || hash.length < 2) return;
+    function go() {
+        var el = document.querySelector(hash);
+        if (el) el.scrollIntoView({ block: 'start', behavior: 'instant' });
+    }
+    if (document.readyState === 'complete') setTimeout(go, 0);
+    else window.addEventListener('load', function () { setTimeout(go, 0); });
+})();
+</script>
+{% endblock %}

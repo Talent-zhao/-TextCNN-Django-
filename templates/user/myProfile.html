@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}  {{ block.super }}   {% endblock %}
+
+{% block css %}
+    <style>
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="panel panel-primary">
+        <div class="panel-heading">我的个人资料</div>
+        <div class="panel-body">
+            <div>
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %}" role="alert">{{ message }}</div>
+                {% endfor %}
+            </div>
+            <form class="form-horizontal" style="width: 600px" method="post" action="{% url 'myProfile' %}"
+                  enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_profile">
+                <div class="form-group">
+                    <label for="username" class="col-sm-2 control-label">头像</label>
+                    <div class="col-sm-10">
+                        <input value="{{ userinfo.avatar }}" name="avatar" type="file" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="username" class="col-sm-2 control-label">用户名</label>
+                    <div class="col-sm-10">
+                        <input value="{{ userinfo.username }}" name="username" type="text" class="form-control"
+                               id="username" placeholder="输入用户名"
+                               required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="sex" class="col-sm-2 control-label">性别</label>
+                    <div class="col-sm-10">
+                        <select name="sex" id="sex" class="form-control" required>
+                            <option {% if userinfo.sex == '男' %} selected {% endif %} value="男">男</option>
+                            <option {% if userinfo.sex == '女' %} selected {% endif %} value="女">女</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">Email</label>
+                    <div class="col-sm-10">
+                        <input value="{{ userinfo.email }}" name="email" type="email" class="form-control"
+                               id="inputEmail3" placeholder="Email"
+                               required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tel" class="col-sm-2 control-label">手机号</label>
+                    <div class="col-sm-10">
+                        <input value="{{ userinfo.tel }}" name="tel" type="text" class="form-control" id="tel"
+                               placeholder="请输入手机号" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="tel" class="col-sm-2 control-label">地址</label>
+                    <div class="col-sm-10">
+                        <input value="{{ userinfo.address }}" name="address" type="text" class="form-control" id="tel"
+                               placeholder="请输入地址" required>
+                    </div>
+                </div>
+
+
+
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <button type="submit" class="btn btn-danger">确定修改</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">我的套餐与额度</div>
+        <div class="panel-body">
+            <p><strong>当前套餐：</strong>
+                {% if active_user_plan %}
+                    {{ active_user_plan.plan.name }}（状态：{{ active_user_plan.get_status_display }}）
+                {% else %}
+                    未绑定有效套餐
+                {% endif %}
+            </p>
+            <p><strong>当前额度：</strong>
+                {% if active_user_plan %}{{ active_user_plan.remaining_quota }} 次{% else %}0 次{% endif %}
+            </p>
+            <p><strong>可用模型登记：</strong>
+                {% if allowed_algo_list %}
+                    {% for x in allowed_algo_list %}
+                        <span class="label label-primary" style="margin-right:6px;">{{ x.name }}</span>
+                    {% endfor %}
+                {% else %}
+                    <span class="text-warning">暂无可用登记（可能未绑定套餐、方案未勾选登记，或模型未开放前台）</span>
+                {% endif %}
+            </p>
+            <hr>
+            <div class="row">
+                <div class="col-sm-6">
+                    <h4>虚拟购买额度</h4>
+                    <p class="text-muted">仅用于演示购买流程，不接真实支付。</p>
+                    <form method="post" action="{% url 'myProfile' %}" class="form-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="virtual_recharge">
+                        <div class="form-group">
+                            <label>购买次数</label>
+                            <input type="number" name="buy_count" min="1" value="10" class="form-control" style="margin-left:8px;width:120px;">
+                        </div>
+                        <button type="submit" class="btn btn-success">模拟支付并充值</button>
+                    </form>
+                </div>
+                <div class="col-sm-6">
+                    <h4>虚拟更改套餐</h4>
+                    <p class="text-muted">切换后按目标套餐总额度重置当前可用次数。</p>
+                    <form method="post" action="{% url 'myProfile' %}" class="form-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="virtual_change_plan">
+                        <div class="form-group">
+                            <label>选择套餐</label>
+                            <select name="plan_id" class="form-control" style="margin-left:8px;width:220px;">
+                                {% for p in available_plans %}
+                                <option value="{{ p.id }}">{{ p.name }}（总额度 {{ p.total_quota }}）</option>
+                                {% empty %}
+                                <option value="">暂无可选套餐</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning">模拟支付并切换</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    <script>
+        $('.btn-danger').click(function () {
+
+        })
+    </script>
+{% endblock %}

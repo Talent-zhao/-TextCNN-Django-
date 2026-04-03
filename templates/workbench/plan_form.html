@@ -1,0 +1,71 @@
+{% extends "admin_base.html" %}
+{% block title %}方案编辑{% endblock %}
+{% block content %}
+<div class="panel panel-default">
+  <div class="panel-heading"><h3 class="panel-title">{% if plan %}编辑方案{% else %}新建方案{% endif %}</h3></div>
+  <div class="panel-body">
+    <form method="post" class="form-horizontal">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="col-sm-2 control-label">名称</label>
+        <div class="col-sm-6"><input type="text" name="name" class="form-control" value="{{ plan.name|default_if_none:'' }}" required></div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label">描述</label>
+        <div class="col-sm-6"><input type="text" name="description" class="form-control" value="{{ plan.description|default_if_none:'' }}"></div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label">可预测次数（倒计数）</label>
+        <div class="col-sm-3"><input type="number" min="0" name="total_quota" class="form-control" value="{{ plan.total_quota|default_if_none:0 }}"></div>
+        <div class="col-sm-3 checkbox"><label><input type="checkbox" name="is_active" {% if not plan or plan.is_active %}checked{% endif %}> 启用</label></div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2 control-label">可用模型</label>
+        <div class="col-sm-9">
+          <p class="help-block" style="margin-top: 0;">
+            按<strong>数据库中的模型登记</strong>（「模型管理」中<strong>就绪 + 开放前台</strong>）勾选；保存为登记主键 <code>id</code>，在线预测仅展示被选中的登记。
+            选「不限制」表示不按方案限制登记（仍受账号「可用算法类型」与登记前台可见性约束）。
+          </p>
+          {% if plan_has_legacy_types_only %}
+          <p class="alert alert-info small">本方案原为「按算法类型」配置，已展开为下方登记勾选；保存后将改为按<strong>登记 ID</strong>存储。</p>
+          {% endif %}
+          <div class="radio">
+            <label>
+              <input type="radio" name="plan_algo_mode" value="all" {% if plan_algo_mode != 'pick' %}checked{% endif %}>
+              不限制（全部已开放前台登记）
+            </label>
+          </div>
+          <div class="radio">
+            <label>
+              <input type="radio" name="plan_algo_mode" value="pick" {% if plan_algo_mode == 'pick' %}checked{% endif %}>
+              仅允许勾选的模型登记
+            </label>
+          </div>
+          <div style="padding: 8px 10px; border: 1px solid #eee; border-radius: 4px; margin-top: 8px; max-height: 320px; overflow-y: auto;">
+            {% if model_registrations %}
+              {% for mi in model_registrations %}
+              <div class="checkbox" style="margin-top: 4px; margin-bottom: 4px;">
+                <label>
+                  <input type="checkbox" name="model_reg_id" value="{{ mi.id }}" {% if mi.id in plan_picked_ids %}checked{% endif %}>
+                  <strong>{{ mi.name }}</strong> / {{ mi.version }}
+                  <span class="text-muted">— {{ mi.get_model_type_display }}</span>
+                  <span class="text-muted small">id={{ mi.id }}</span>
+                </label>
+              </div>
+              {% endfor %}
+            {% else %}
+              <span class="text-warning">当前没有「就绪 + 开放前台」的模型登记，请先在模型管理中开放至少一条。</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-6">
+          <button type="submit" class="btn btn-primary">保存</button>
+          <a href="{% url 'model_plan_list' %}" class="btn btn-default">返回</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

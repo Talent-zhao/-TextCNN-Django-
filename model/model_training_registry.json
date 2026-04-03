@@ -1,0 +1,182 @@
+{
+  "model/textcnn/textcnn.pt": {
+    "train_count": 39,
+    "best_recall_macro": 0.631749185004075,
+    "last_recall_macro": 0.5208333333333334,
+    "last_loss": 0.24374971587591318,
+    "last_train_at": "2026-04-01 15:12:59",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "textcnn"
+  },
+  "model/textcnn/textcnn_vocab.json": {
+    "train_count": 43,
+    "best_recall_macro": 0.6511428516197553,
+    "last_recall_macro": 0.5208333333333334,
+    "last_loss": 0.24374971587591318,
+    "last_train_at": "2026-04-01 15:12:59",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "textcnn"
+  },
+  "model/num2name.json": {
+    "train_count": 91,
+    "best_recall_macro": 0.991151083304368,
+    "last_recall_macro": 0.53125,
+    "last_loss": 0.24530400657929438,
+    "last_train_at": "2026-04-01 15:13:39",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "textrcnn"
+  },
+  "model/svm/model_svm.pkl": {
+    "train_count": 7,
+    "best_recall_macro": 0.7777777777777778,
+    "last_recall_macro": 0.7777777777777778,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 11:50:42",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "svm"
+  },
+  "model/svm/tfidfVectorizer.pkl": {
+    "train_count": 20,
+    "best_recall_macro": 0.7777777777777778,
+    "last_recall_macro": 0.7777777777777778,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 11:50:42",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "svm"
+  },
+  "model/svm/tfidfVectorizer_svm.pkl": {
+    "train_count": 7,
+    "best_recall_macro": 0.7777777777777778,
+    "last_recall_macro": 0.7777777777777778,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 11:50:42",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "svm"
+  },
+  "model/textrcnn/textrcnn.pt": {
+    "train_count": 9,
+    "best_recall_macro": 0.6511428516197553,
+    "last_recall_macro": 0.53125,
+    "last_loss": 0.24530400657929438,
+    "last_train_at": "2026-04-01 15:13:39",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "textrcnn"
+  },
+  "model/knn/model_knn.pkl": {
+    "train_count": 15,
+    "best_recall_macro": 0.5690534121191055,
+    "last_recall_macro": 0.5540928050052137,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:08:15",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "knn"
+  },
+  "model/knn/tfidfVectorizer_knn.pkl": {
+    "train_count": 15,
+    "best_recall_macro": 0.5690534121191055,
+    "last_recall_macro": 0.5540928050052137,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:08:15",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "knn"
+  },
+  "model/rf/model_rf.pkl": {
+    "train_count": 8,
+    "best_recall_macro": 0.9444444444444444,
+    "last_recall_macro": 0.9444444444444444,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:09:10",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "rf"
+  },
+  "model/rf/tfidfVectorizer_rf.pkl": {
+    "train_count": 8,
+    "best_recall_macro": 0.9444444444444444,
+    "last_recall_macro": 0.9444444444444444,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:09:10",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "rf"
+  },
+  "model/dt/model_dt.pkl": {
+    "train_count": 6,
+    "best_recall_macro": 0.991151083304368,
+    "last_recall_macro": 0.991151083304368,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:10:09",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "dt"
+  },
+  "model/dt/tfidfVectorizer_dt.pkl": {
+    "train_count": 6,
+    "best_recall_macro": 0.991151083304368,
+    "last_recall_macro": 0.991151083304368,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:10:09",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "dt"
+  },
+  "model/lr/model_lr.pkl": {
+    "train_count": 6,
+    "best_recall_macro": 0.5634920634920635,
+    "last_recall_macro": 0.5634920634920635,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:11:28",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "lr"
+  },
+  "model/lr/tfidfVectorizer_lr.pkl": {
+    "train_count": 6,
+    "best_recall_macro": 0.5634920634920635,
+    "last_recall_macro": 0.5634920634920635,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:11:28",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "lr"
+  },
+  "model/knn/tfidfVectorizer.pkl": {
+    "train_count": 12,
+    "best_recall_macro": 0.5690534121191055,
+    "last_recall_macro": 0.5540928050052137,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:08:15",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "knn"
+  },
+  "model/lr/tfidfVectorizer.pkl": {
+    "train_count": 3,
+    "best_recall_macro": 0.5634920634920635,
+    "last_recall_macro": 0.5634920634920635,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:11:28",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "lr"
+  },
+  "model/rf/tfidfVectorizer.pkl": {
+    "train_count": 5,
+    "best_recall_macro": 0.9444444444444444,
+    "last_recall_macro": 0.9444444444444444,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:09:10",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "rf"
+  },
+  "model/textrcnn/textcnn_vocab.json": {
+    "train_count": 5,
+    "best_recall_macro": 0.63849837000815,
+    "last_recall_macro": 0.53125,
+    "last_loss": 0.24530400657929438,
+    "last_train_at": "2026-04-01 15:13:39",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "textrcnn"
+  },
+  "model/dt/tfidfVectorizer.pkl": {
+    "train_count": 2,
+    "best_recall_macro": 0.991151083304368,
+    "last_recall_macro": 0.991151083304368,
+    "last_loss": null,
+    "last_train_at": "2026-04-01 15:10:09",
+    "last_csv": "datasets/depression_nlp/zh/oesd_keyword_binary/splits/train.csv",
+    "last_algo": "dt"
+  }
+}

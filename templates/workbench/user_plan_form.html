@@ -1,0 +1,79 @@
+{% extends "admin_base.html" %}
+{% block title %}用户套餐编辑{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">{% if user_plan %}编辑用户套餐{% else %}绑定用户套餐{% endif %}</h3></div>
+    <div class="panel-body">
+        <form method="post" class="form-horizontal">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="col-sm-2 control-label">用户</label>
+                <div class="col-sm-6">
+                    <select name="user_id" class="form-control" {% if user_plan %}disabled{% endif %}>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {% if user_plan and user_plan.user.id == u.id %}selected{% endif %}>
+                            {{ u.username }} ({{ u.id }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if user_plan %}
+                        <input type="hidden" name="user_id" value="{{ user_plan.user.id }}">
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">方案</label>
+                <div class="col-sm-6">
+                    {% if not plans %}
+                    <p class="text-warning">还没有任何授权方案，请先到
+                        <a href="{% url 'model_plan_add' %}">新建模型授权方案</a>。
+                    </p>
+                    {% endif %}
+                    <select name="plan_id" class="form-control" {% if not plans %}disabled{% endif %}>
+                        {% for p in plans %}
+                        <option value="{{ p.id }}" {% if user_plan and user_plan.plan.id == p.id %}selected{% endif %}>
+                            {{ p.name }}{% if not p.is_active %} （已停用）{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if plans %}
+                    <p class="help-block text-muted">含已停用方案，便于先把用户绑定好再在方案页启用。</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">剩余额度</label>
+                <div class="col-sm-3">
+                    <input type="number" name="remaining_quota" class="form-control"
+                           value="{% if user_plan %}{{ user_plan.remaining_quota }}{% endif %}"
+                           placeholder="留空则使用方案总额度">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">状态</label>
+                <div class="col-sm-3">
+                    <select name="status" class="form-control">
+                        {% if user_plan %}
+                            {% for k,v in user_plan.STATUS_CHOICES %}
+                            <option value="{{ k }}" {% if user_plan.status == k %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="pending">待生效</option>
+                            <option value="active" selected>生效中</option>
+                            <option value="expired">已过期</option>
+                            <option value="suspended">已停用</option>
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-6">
+                    <button type="submit" class="btn btn-primary" {% if not plans %}disabled title="请先创建授权方案"{% endif %}>保存</button>
+                    <a href="{% url 'user_plan_list' %}" class="btn btn-default">返回</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

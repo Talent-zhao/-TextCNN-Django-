@@ -1,0 +1,34 @@
+{% extends "admin_base.html" %}
+{% block title %}自检明细{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">自检明细 #{{ row.id }}</h3></div>
+    <div class="panel-body">
+        <p><strong>时间：</strong>{{ row.created_at|date:"Y-m-d H:i:s" }}</p>
+        <p><strong>模式：</strong>{{ row.mode }}</p>
+        <p><strong>摘要：</strong>{{ row.summary }}</p>
+        <p><strong>是否错误：</strong>{% if row.has_error %}是{% else %}否{% endif %}</p>
+        <hr>
+        {% for report in detail %}
+            <div class="panel panel-{% if report.summary == 'error' %}danger{% elif report.summary == 'warning' %}warning{% else %}success{% endif %}">
+                <div class="panel-heading">
+                    {% if report.model %}{{ report.model.name }} / {{ report.model.version }}{% if report.model.model_type_display %} / {{ report.model.model_type_display }}{% endif %}{% else %}无模型{% endif %}
+                </div>
+                <table class="table table-bordered">
+                    <thead><tr><th>检查项</th><th>级别</th><th>说明</th></tr></thead>
+                    <tbody>
+                    {% for item in report.items %}
+                        <tr>
+                            <td>{{ item.check }}</td>
+                            <td>{{ item.level }}</td>
+                            <td>{{ item.message }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

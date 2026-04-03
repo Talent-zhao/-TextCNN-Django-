@@ -1,0 +1,88 @@
+{% extends "admin_base.html" %}
+{% block title %}算法实验记录{% endblock %}
+
+{% block content %}
+<p style="margin-bottom: 12px;">
+    <a href="{% url 'algorithm_compare' %}" class="btn btn-default">返回算法对比</a>
+</p>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">算法对比实验记录</h3>
+    </div>
+    <div class="panel-body">
+        <form method="get" class="form-inline" style="margin-bottom: 12px;">
+            <div class="form-group">
+                <label>算法类型</label>
+                <select name="algorithm_type" class="form-control">
+                    <option value="">全部</option>
+                    {% for k,v in algo_choices %}
+                    <option value="{{ k }}" {% if algorithm_type == k %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-left: 8px;">
+                <label>数据版本</label>
+                <input type="text" name="dataset_version" class="form-control" value="{{ dataset_version }}" placeholder="如 v2026-03">
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-left: 8px;">筛选</button>
+            <a href="{% url 'algorithm_experiment_record_add' %}" class="btn btn-success" style="margin-left: 8px;">新增实验记录</a>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>实验名称</th>
+                    <th>数据版本</th>
+                    <th>算法类型</th>
+                    <th>样本规模</th>
+                    <th>TF-IDF 上限</th>
+                    <th>Accuracy</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                    <th>F1</th>
+                    <th>AUC</th>
+                    <th>训练时间(秒)</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td>{{ r.id }}</td>
+                    <td>{{ r.name }}</td>
+                    <td>{{ r.dataset_version }}</td>
+                    <td>{{ r.get_algorithm_type_display }}</td>
+                    <td class="small">{{ r.get_train_sample_scale_display }}</td>
+                    <td class="small">{{ r.get_sklearn_max_features_display }}</td>
+                    <td>{{ r.accuracy|floatformat:4 }}</td>
+                    <td>{{ r.precision|floatformat:4 }}</td>
+                    <td>{{ r.recall|floatformat:4 }}</td>
+                    <td>{{ r.f1_score|floatformat:4 }}</td>
+                    <td>{% if r.auc != None %}{{ r.auc|floatformat:4 }}{% else %}-{% endif %}</td>
+                    <td>{% if r.training_time_sec != None %}{{ r.training_time_sec|floatformat:3 }}{% else %}-{% endif %}</td>
+                    <td>{{ r.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>
+                        <a href="{% url 'algorithm_experiment_record_edit' r.id %}" class="btn btn-xs btn-info">编辑</a>
+                        <form method="post" style="display:inline;"
+                              onsubmit="return confirm('确定删除实验记录「{{ r.name|escapejs }}」（ID {{ r.id }}）？此操作不可恢复。');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="record_id" value="{{ r.id }}">
+                            <input type="hidden" name="filter_algorithm_type" value="{{ algorithm_type }}">
+                            <input type="hidden" name="filter_dataset_version" value="{{ dataset_version }}">
+                            <button type="submit" class="btn btn-xs btn-danger">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="14" class="text-center text-muted">暂无实验记录</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

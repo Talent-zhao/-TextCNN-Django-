@@ -1,0 +1,100 @@
+{% extends "admin_base.html" %}
+{% block title %}{% if row %}编辑实验记录{% else %}新增实验记录{% endif %}{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">{% if row %}编辑实验记录{% else %}新增实验记录{% endif %}</h3>
+    </div>
+    <div class="panel-body">
+        <form method="post" class="form-horizontal">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="col-sm-2 control-label">实验名称</label>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" name="name" value="{{ row.name|default_if_none:'' }}" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">数据版本</label>
+                <div class="col-sm-4">
+                    <input type="text" class="form-control" name="dataset_version" value="{{ row.dataset_version|default_if_none:'' }}" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">算法类型</label>
+                <div class="col-sm-4">
+                    <select name="algorithm_type" class="form-control" required>
+                        {% for k,v in algo_choices %}
+                        <option value="{{ k }}" {% if row and row.algorithm_type == k %}selected{% endif %}>{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">样本规模<br><span class="small text-muted">（传统 ML 与深度学习共用）</span></label>
+                <div class="col-sm-8">
+                    <select name="train_sample_scale" class="form-control" style="max-width:560px;">
+                        {% for k, label in train_sample_choices %}
+                        <option value="{{ k }}" {% if row %}{% if row.train_sample_scale == k %}selected{% endif %}{% else %}{% if k == 'full' %}selected{% endif %}{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="help-block small">与「模型训练」页同一套选项；记录本次实验实际使用的子采样/全量设置。</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">TF-IDF 特征上限<br><span class="small text-muted">（仅传统 ML）</span></label>
+                <div class="col-sm-8">
+                    <select name="sklearn_max_features" class="form-control" style="max-width:480px;">
+                        {% for k, label in sklearn_mf_choices %}
+                        <option value="{{ k }}" {% if row %}{% if row.sklearn_max_features == k %}selected{% endif %}{% else %}{% if k == '8000' %}selected{% endif %}{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="help-block small">传统 ML 实验对应 TF-IDF <code>max_features</code>；TextCNN / TextRCNN 实验可保留默认，仅作文档记录。</p>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">超参数 JSON</label>
+                <div class="col-sm-8">
+                    <textarea name="hyperparams_json" rows="4" class="form-control">{{ row.hyperparams_json|default:'{}' }}</textarea>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">训练时间(秒)</label>
+                <div class="col-sm-2">
+                    <input type="number" step="0.001" class="form-control" name="training_time_sec" value="{% if row.training_time_sec != None %}{{ row.training_time_sec }}{% endif %}">
+                </div>
+                <label class="col-sm-1 control-label">AUC</label>
+                <div class="col-sm-2">
+                    <input type="number" step="0.0001" class="form-control" name="auc" value="{% if row.auc != None %}{{ row.auc }}{% endif %}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Accuracy</label>
+                <div class="col-sm-2"><input type="number" step="0.0001" class="form-control" name="accuracy" value="{{ row.accuracy|default_if_none:0 }}"></div>
+                <label class="col-sm-1 control-label">Precision</label>
+                <div class="col-sm-2"><input type="number" step="0.0001" class="form-control" name="precision" value="{{ row.precision|default_if_none:0 }}"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Recall</label>
+                <div class="col-sm-2"><input type="number" step="0.0001" class="form-control" name="recall" value="{{ row.recall|default_if_none:0 }}"></div>
+                <label class="col-sm-1 control-label">F1</label>
+                <div class="col-sm-2"><input type="number" step="0.0001" class="form-control" name="f1_score" value="{{ row.f1_score|default_if_none:0 }}"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">备注</label>
+                <div class="col-sm-8">
+                    <input type="text" class="form-control" name="remark" value="{{ row.remark|default_if_none:'' }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-8">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <a href="{% url 'algorithm_experiment_record_list' %}" class="btn btn-default">返回列表</a>
+                    <a href="{% url 'algorithm_compare' %}" class="btn btn-default">返回算法对比</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

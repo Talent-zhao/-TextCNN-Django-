@@ -1,0 +1,73 @@
+{% extends "admin_base.html" %}
+{% block title %}导出日志{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">导出任务日志列表</h3></div>
+    <div class="panel-body">
+        <form class="form-inline" method="get" style="margin-bottom:12px;">
+            <label>导出类型：</label>
+            <select name="export_type" class="form-control" style="margin-right:8px;">
+                <option value="">全部</option>
+                {% for k, v in type_choices %}
+                    <option value="{{ k }}" {% if export_type == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+            <label>导出格式：</label>
+            <select name="export_format" class="form-control" style="margin-right:8px;">
+                <option value="">全部</option>
+                {% for k, v in format_choices %}
+                    <option value="{{ k }}" {% if export_format == k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-primary" type="submit">筛选</button>
+            <a class="btn btn-default" href="{% url 'export_log_list' %}">重置</a>
+        </form>
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>导出类型</th>
+                <th>导出格式</th>
+                <th>导出人</th>
+                <th>导出条数</th>
+                <th>导出时间</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in page_obj.object_list %}
+                <tr>
+                    <td>{{ row.id }}</td>
+                    <td>{{ row.get_export_type_display }}</td>
+                    <td>{{ row.get_export_format_display }}</td>
+                    <td>{% if row.exporter %}{{ row.exporter.username }}{% else %}-{% endif %}</td>
+                    <td>{{ row.export_count }}</td>
+                    <td>{{ row.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td><a href="{% url 'export_log_detail' row.id %}" class="btn btn-xs btn-info">详情</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="text-center">暂无导出日志</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav>
+            <ul class="pagination" style="margin:0;">
+                {% if page_obj.has_previous %}
+                    <li><a href="?page={{ page_obj.previous_page_number }}&export_type={{ export_type|urlencode }}&export_format={{ export_format|urlencode }}">上一页</a></li>
+                {% else %}
+                    <li class="disabled"><span>上一页</span></li>
+                {% endif %}
+                <li class="active"><span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                    <li><a href="?page={{ page_obj.next_page_number }}&export_type={{ export_type|urlencode }}&export_format={{ export_format|urlencode }}">下一页</a></li>
+                {% else %}
+                    <li class="disabled"><span>下一页</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,386 @@
+{% extends "admin_base.html" %}
+{% block title %}模型训练{% endblock %}
+
+{% block content %}
+<style>
+.train-locale-picker-btns {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+}
+.train-locale-picker-btns .train-locale-btn {
+    border-radius: 999px;
+    padding: 8px 22px;
+    min-width: 4.5em;
+}
+</style>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">算法模型训练</h3>
+    </div>
+    <div class="panel-body">
+        {% if messages %}
+            {% for m in messages %}
+                <div class="alert alert-{% if m.level_tag == 'error' %}danger{% else %}{{ m.level_tag }}{% endif %}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+        <p class="text-muted">
+            使用含 <code>text</code>、<code>label</code> 列的 CSV 训练，产物写入 <code>model/</code>；全库共扫描到 {{ csv_choices|length }} 个可训练 CSV（已排除验证/测试划分）。规则融合类模型无需在此训练。
+        </p>
+        <input type="hidden" id="js_default_train_csv" value="{{ default_csv }}">
+        <input type="hidden" id="train_data_locale" value="{{ train_data_locale_default }}">
+
+        <div class="form-group train-locale-picker" style="margin-bottom:10px;">
+            <label class="control-label" style="display:block;margin-bottom:8px;">训练数据目录</label>
+            <div class="train-locale-picker-btns" role="group" aria-label="训练数据目录">
+                <button type="button" class="btn btn-default train-locale-btn" data-locale="all" title="不过滤路径">全部</button>
+                <button type="button" class="btn btn-default train-locale-btn" data-locale="zh" title="{{ datasets_zh_rel }}">中文</button>
+                <button type="button" class="btn btn-default train-locale-btn" data-locale="en" title="{{ datasets_en_rel }}">英文</button>
+            </div>
+        </div>
+
+        <div id="train_data_locale_desc_box" class="alert alert-info train-locale-desc-box" style="margin-bottom:16px;">
+            <p id="locale_desc_all" class="locale-desc-p" style="display:none;margin:0;">
+                <strong>当前：全部目录。</strong>
+                列出 <code>{{ datasets_nlp_rel }}</code> 下本次扫描到的所有可训练 CSV（含 <code>zh/</code>、<code>en/</code> 以及未放入这两个子目录的文件）。
+                需要同时浏览或混选多源数据时选此项。
+            </p>
+            <p id="locale_desc_zh" class="locale-desc-p" style="display:none;margin:0;">
+                <strong>当前：中文目录。</strong>
+                仅列出路径在 <code>{{ datasets_zh_rel }}/</code> 下的文件，适用于中文抑郁相关语料训练；与英文数据分开显示，减少误选。
+            </p>
+            <p id="locale_desc_en" class="locale-desc-p" style="display:none;margin:0;">
+                <strong>当前：英文目录。</strong>
+                仅列出路径在 <code>{{ datasets_en_rel }}/</code> 下的文件，适用于 Reddit、Mental Health 等英文语料训练。
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="csv_quick_pick">选择具体 CSV（随上方目录筛选）</label>
+            <select id="csv_quick_pick" class="form-control" style="max-width:720px;">
+                <option value="">— 请先选择语言，再选 CSV —</option>
+                {% for p in csv_choices %}
+                    <option value="{{ p }}" data-locale="{% if '/zh/' in p %}zh{% elif '/en/' in p %}en{% else %}other{% endif %}" {% if p == default_csv %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" id="csv_path" value="">
+            <p class="help-block">
+                {% if csv_choices %}
+                    当前筛选下共 <strong id="train_csv_scope_count">—</strong> 个 CSV；选择后即作为本次训练路径。
+                    <span id="train_csv_scope_empty" class="text-warning" style="display:none;">当前区域下没有可用文件，请切换语言或向对应目录添加 CSV 后刷新。</span>
+                {% else %}
+                    当前目录下未发现 <code>.csv</code> 文件。
+                {% endif %}
+                <a href="{% url 'model_training_open_folder' %}?subset=zh&next={{ request.get_full_path|urlencode }}" class="btn btn-default btn-xs btn-open-folder-link" title="打开 {{ datasets_zh_rel }}（默认中文训练数据）">
+                    <span class="glyphicon glyphicon-folder-open"></span> 打开 zh
+                </a>
+                <a href="{% url 'model_training_open_folder' %}?subset=en&next={{ request.get_full_path|urlencode }}" class="btn btn-default btn-xs btn-open-folder-link" title="打开 {{ datasets_en_rel }}（英文集）">
+                    <span class="glyphicon glyphicon-folder-open"></span> 打开 en
+                </a>
+                <a href="{% url 'model_training_open_folder' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-default btn-xs btn-open-folder-link" title="打开 {{ datasets_nlp_rel }} 根目录（含 en、zh）">
+                    <span class="glyphicon glyphicon-folder-open"></span> 数据根目录
+                </a>
+                <a href="{% url 'model_open_folder' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-default btn-xs btn-open-folder-link" title="在本机资源管理器中打开 model 目录（训练产物）">
+                    <span class="glyphicon glyphicon-hdd"></span> 打开 model 文件夹
+                </a>
+                <span class="text-muted">（添加文件后请刷新本页以更新列表）</span>
+            </p>
+            {% if not default_csv_exists and csv_choices %}
+                <p class="help-block text-warning">默认示例路径下暂无文件，请从上方列表选择实际存在的 CSV。</p>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="train_algo">选择算法</label>
+            <select id="train_algo" class="form-control" style="max-width:480px;">
+                <option value="">— 请选择 —</option>
+                <optgroup label="传统机器学习（TF-IDF + 分类器）">
+                    <option value="svm">SVM</option>
+                    <option value="knn">KNN</option>
+                    <option value="rf">随机森林</option>
+                    <option value="dt">决策树</option>
+                    <option value="lr">逻辑回归</option>
+                </optgroup>
+                <optgroup label="深度学习（字符级，CPU）">
+                    <option value="textcnn">TextCNN</option>
+                    <option value="textrcnn">TextRCNN</option>
+                </optgroup>
+            </select>
+            <p class="help-block">
+                先选算法后，下方会出现对应的<strong>预设选项</strong>（仅允许列表中的值，避免误填影响效果）。TextCNN / TextRCNN 在 CPU 上对大 CSV 可能需数十分钟；Windows 上两者多用轻量 CharBagMLP。
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="train_sample_scale">样本规模（传统 ML 与深度学习共用）</label>
+            <select id="train_sample_scale" class="form-control" style="max-width:560px;">
+                {% for k, label in train_sample_choices %}
+                    <option value="{{ k }}" {% if k == 'full' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <p class="help-block small">子采样仅用于试跑或控时；正式训练建议「全量」。</p>
+        </div>
+
+        <div id="sklearn_train_options" class="form-group" style="display:none;">
+            <label for="sklearn_max_features">TF-IDF 特征上限（仅传统 ML）</label>
+            <select id="sklearn_max_features" class="form-control" style="max-width:480px;">
+                {% for k, label in sklearn_mf_choices %}
+                    <option value="{{ k }}" {% if k == '8000' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="torch_train_options" class="form-group" style="display:none;">
+            <label for="torch_epochs">训练轮数（仅深度学习）</label>
+            <input type="number" id="torch_epochs" class="form-control" value="-1" min="-1" max="64" step="1" style="max-width:200px;">
+            <p class="help-block small"><code>-1</code> 表示按样本量<strong>自动</strong>决定轮数；填 <code>1～64</code> 为固定 epoch。不能为 <code>0</code>。</p>
+            <label for="torch_batch" style="margin-top:10px;">批次大小 batch size（仅深度学习）</label>
+            <select id="torch_batch" class="form-control" style="max-width:480px;">
+                {% for k, label in torch_batch_choices %}
+                    <option value="{{ k }}" {% if k == 'auto' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <p>
+            <button type="button" class="btn btn-primary" id="btn_train_start">
+                <span class="glyphicon glyphicon-play"></span> 开始训练
+            </button>
+        </p>
+
+        <div id="train_status" class="alert" style="display:none;"></div>
+        <label>训练日志（流式刷新，含验证集准确率、各类别召回率 recall、F1 等；首行显示本次训练 CSV）</label>
+        <pre id="train_log" class="pre-scrollable" style="max-height:420px;overflow-y:auto;background:#f5f5f5;padding:12px;white-space:pre-wrap;word-break:break-word;"></pre>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+(function () {
+    var runUrl = '{% url "model_training_run" %}';
+    var $pick = $('#csv_quick_pick');
+    var $path = $('#csv_path');
+    var $localeHidden = $('#train_data_locale');
+    var csvOptionsBackup = null;
+
+    function setLocaleUI(loc) {
+        loc = String(loc || 'zh').trim();
+        if (loc !== 'all' && loc !== 'zh' && loc !== 'en') loc = 'zh';
+        $localeHidden.val(loc);
+        $('.train-locale-btn').removeClass('btn-primary').addClass('btn-default');
+        $('.train-locale-btn[data-locale="' + loc + '"]').removeClass('btn-default').addClass('btn-primary');
+        $('.locale-desc-p').hide();
+        $('#locale_desc_' + loc).show();
+    }
+
+    function getLocaleVal() {
+        return ($localeHidden.val() || 'zh').trim();
+    }
+
+    function localeFromPath(p) {
+        p = (p || '').replace(/\\/g, '/').toLowerCase();
+        if (p.indexOf('/zh/') >= 0) return 'zh';
+        if (p.indexOf('/en/') >= 0) return 'en';
+        return 'other';
+    }
+
+    function readLocaleFromOption(el) {
+        var a = (el.getAttribute('data-locale') || '').trim();
+        if (a === 'zh' || a === 'en' || a === 'other') return a;
+        return localeFromPath(el.value);
+    }
+
+    function initCsvOptionsBackup() {
+        csvOptionsBackup = [];
+        $pick.find('option').each(function () {
+            var v = (this.value || '').trim();
+            if (!v) return;
+            csvOptionsBackup.push({
+                value: v,
+                text: this.textContent || v,
+                locale: readLocaleFromOption(this)
+            });
+        });
+    }
+
+    function pickAfterFilter() {
+        var def = ($('#js_default_train_csv').val() || '').trim().replace(/\\/g, '/');
+        var tryVals = [def];
+        var seen = {};
+        var i, v, $m;
+        for (i = 0; i < tryVals.length; i++) {
+            v = tryVals[i];
+            if (!v || seen[v]) continue;
+            seen[v] = true;
+            $m = $pick.find('option').filter(function () { return this.value === v; });
+            if ($m.length) {
+                $pick.val(v);
+                return;
+            }
+        }
+        var $first = $pick.find('option[value!=""]').first();
+        $pick.val($first.length ? $first.val() : '');
+    }
+
+    /** prevCsv：显式传入切换语言前选中的路径；不传则在清空下拉前读取当前选中（用于首次筛选）。 */
+    function applyCsvLocaleFilter(prevCsv) {
+        if (!csvOptionsBackup) return;
+        var loc = getLocaleVal();
+        var prev;
+        if (arguments.length >= 1) {
+            prev = String(prevCsv == null ? '' : prevCsv).trim();
+        } else {
+            prev = ($pick.val() || '').trim();
+        }
+        $pick.empty();
+        $pick.append($('<option></option>').val('').text('— 请选择 CSV —'));
+        var n = 0;
+        var j, o;
+        for (j = 0; j < csvOptionsBackup.length; j++) {
+            o = csvOptionsBackup[j];
+            if (loc !== 'all' && o.locale !== loc) continue;
+            $pick.append($('<option></option>').val(o.value).text(o.text));
+            n++;
+        }
+        var $count = $('#train_csv_scope_count');
+        if ($count.length) $count.text(String(n));
+        $('#train_csv_scope_empty').toggle(n === 0);
+        if (prev && $pick.find('option').filter(function () { return this.value === prev; }).length) {
+            $pick.val(prev);
+        } else {
+            pickAfterFilter();
+        }
+        syncCsvPathFromPick();
+    }
+
+    function syncCsvPathFromPick() {
+        $path.val(($pick.val() || '').trim());
+    }
+    $pick.on('change', syncCsvPathFromPick);
+
+    initCsvOptionsBackup();
+    setLocaleUI($localeHidden.val());
+    applyCsvLocaleFilter();
+    $('.train-locale-btn').on('click', function () {
+        var loc = ($(this).attr('data-locale') || 'zh').trim();
+        setLocaleUI(loc);
+        applyCsvLocaleFilter(($pick.val() || '').trim());
+    });
+    var $sk = $('#sklearn_train_options');
+    var $th = $('#torch_train_options');
+    function syncTrainOptionPanels() {
+        var a = ($('#train_algo').val() || '').trim();
+        var sk = ['svm', 'knn', 'rf', 'dt', 'lr'].indexOf(a) >= 0;
+        var th = (a === 'textcnn' || a === 'textrcnn');
+        $sk.toggle(sk);
+        $th.toggle(th);
+    }
+    $('#train_algo').on('change', syncTrainOptionPanels);
+    syncTrainOptionPanels();
+    function setStatus(ok, text, kind) {
+        var $s = $('#train_status');
+        $s.removeClass('alert-success alert-danger alert-info').show();
+        if (kind === 'info') {
+            $s.addClass('alert-info');
+        } else {
+            $s.addClass(ok ? 'alert-success' : 'alert-danger');
+        }
+        $s.text(text);
+    }
+    function stripTrainSentinels(s) {
+        return s
+            .replace(/\[TRAIN_EXIT\]\d+\r?\n?/g, '')
+            .replace(/\[TRAIN_TIMEOUT\]\r?\n?/g, '')
+            .replace(/\[TRAIN_ERROR\][^\r\n]*\r?\n?/g, '');
+    }
+    function scrollLogToBottom() {
+        var el = document.getElementById('train_log');
+        if (el) el.scrollTop = el.scrollHeight;
+    }
+    $('#btn_train_start').on('click', function () {
+        var algo = ($('#train_algo').val() || '').trim();
+        if (!algo) {
+            setStatus(false, '请先在下拉菜单中选择算法');
+            return;
+        }
+        syncCsvPathFromPick();
+        var csv_path = ($path.val() || '').trim();
+        if (!csv_path) {
+            setStatus(false, '请先点选「全部 / 中文 / 英文」，再在列表中选择 CSV 文件');
+            return;
+        }
+        var algoLabel = $('#train_algo option:selected').text();
+        var te = parseInt($('#torch_epochs').val(), 10);
+        if (algo === 'textcnn' || algo === 'textrcnn') {
+            if (isNaN(te) || te < -1 || te > 64 || te === 0) {
+                setStatus(false, '训练轮数请填 -1（自动）或 1～64 的整数');
+                return;
+            }
+        }
+        var $ctrl = $('#btn_train_start, #train_algo, #train_sample_scale, #sklearn_max_features, #torch_epochs, #torch_batch, #csv_quick_pick, .train-locale-btn');
+        $ctrl.prop('disabled', true);
+        setStatus(true, '正在训练：' + algoLabel + '（日志实时刷新）…', 'info');
+        var logHeader = '训练数据：' + csv_path + '\n\n';
+        $('#train_log').text(logHeader);
+
+        fetch(runUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+            body: JSON.stringify({
+                algo: algo,
+                csv_path: csv_path,
+                train_sample_scale: ($('#train_sample_scale').val() || 'full'),
+                sklearn_max_features: ($('#sklearn_max_features').val() || '8000'),
+                torch_epochs: (algo === 'textcnn' || algo === 'textrcnn') ? te : -1,
+                torch_batch: ($('#torch_batch').val() || 'auto')
+            })
+        }).then(function (res) {
+            if (!res.ok) {
+                return res.text().then(function (t) {
+                    var msg = '请求失败';
+                    try {
+                        var j = JSON.parse(t);
+                        if (j.msg) msg = j.msg;
+                    } catch (e) {}
+                    setStatus(false, msg);
+                    $('#train_log').text(logHeader + (t || msg));
+                    throw new Error('http');
+                });
+            }
+            if (!res.body || !res.body.getReader) {
+                setStatus(false, '当前浏览器不支持流式日志，请使用较新版本 Chrome / Edge / Firefox');
+                throw new Error('nostream');
+            }
+            var reader = res.body.getReader();
+            var dec = new TextDecoder('utf-8');
+            var buf = '';
+            function pump() {
+                return reader.read().then(function (r) {
+                    if (r.done) {
+                        var xm = buf.match(/\[TRAIN_EXIT\](\d+)/);
+                        var code = xm ? parseInt(xm[1], 10) : 1;
+                        var body = stripTrainSentinels(buf).replace(/\s+$/, '') || '(无输出)';
+                        $('#train_log').text(logHeader + body);
+                        setStatus(code === 0, code === 0 ? '完成：' + algoLabel : '训练失败或超时');
+                        scrollLogToBottom();
+                        return;
+                    }
+                    buf += dec.decode(r.value, { stream: true });
+                    $('#train_log').text(logHeader + buf);
+                    scrollLogToBottom();
+                    return pump();
+                });
+            }
+            return pump();
+        }).catch(function (err) {
+            if (err && err.message !== 'http' && err.message !== 'nostream') {
+                setStatus(false, '网络错误：' + (err.message || String(err)));
+            }
+        }).then(function () {
+            $ctrl.prop('disabled', false);
+        });
+    });
+})();
+</script>
+{% endblock %}

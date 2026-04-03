@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}在线预测{% endblock %}
+
+{% block css %}
+    <style>
+        body {
+            background-color: #E8E8E8;
+        }
+        .predict-result-box { margin-top: 16px; display: none; }
+        .predict-result-main { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .predict-result-main.ok { color: #3c763d; }
+        .predict-result-main.warn { color: #a94442; }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="panel panel-danger">
+        <div class="panel-heading" style="background-color:#0367cc;color: white">
+            <h3 class="panel-title">在线预测</h3>
+        </div>
+        <div class="panel-body">
+            {% csrf_token %}
+            {% if predict_plan_missing %}
+            <div class="alert alert-warning">您尚未绑定有效套餐，无法使用在线预测。请前往 <a href="{% url 'myProfile' %}">个人中心</a> 办理或切换套餐。</div>
+            {% elif not predict_models %}
+            <div class="alert alert-warning">当前套餐下没有可用的已发布模型（请检查授权方案是否包含所需类型、融合策略模型是否在模型管理中「就绪 + 开放前台」）。</div>
+            {% endif %}
+            <form class="form-horizontal" action="" method="post" id="predict_form" onsubmit="return false;">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">使用模型</label>
+                    <div class="col-sm-10">
+                        <select class="form-control" id="predict_model_id" name="model_id" style="max-width:640px;" {% if predict_plan_missing or not predict_models %}disabled{% endif %}>
+                            <option value="">默认：套餐内可用的后台「启用」模型；若不在套餐内则使用列表第一项</option>
+                            {% for m in predict_models %}
+                            <option value="{{ m.id }}" {% if default_predict_model_id == m.id %}selected{% endif %}>
+                                {{ m.name }} / {{ m.version }} — {{ m.get_model_type_display }}{% if m.is_active %}（当前启用）{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="help-block text-muted small">
+                            仅显示您<strong>当前套餐</strong>在授权方案中勾选的<strong>模型登记</strong>（按名称/版本，存库为 id）、且为<strong>就绪 + 开放前台</strong>；若账号仍配置「可用算法类型」则再取交集。无套餐时不可预测。
+                        </p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">检测文本</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" required
+                               placeholder="请输入待检测文本" name="content" value="如果我是dj 你还会爱我吗">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <button id="submit" type="button" class="btn btn-success" {% if predict_plan_missing or not predict_models %}disabled{% endif %}>确定</button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="predict_result_box" class="alert alert-info predict-result-box">
+                <div id="predict_result_main" class="predict-result-main"></div>
+                <p style="margin-bottom:6px;">
+                    <strong>识别标签：</strong><span id="predict_result_label">-</span>
+                    <span style="margin-left:18px;"><strong>风险等级：</strong><span id="predict_result_risk">-</span></span>
+                    <span style="margin-left:18px;"><strong>综合分：</strong><span id="predict_result_score">-</span></span>
+                </p>
+                <p class="small text-muted" style="margin-bottom:0;">
+                    使用模型：<span id="predict_result_model">-</span>
+                    <span id="predict_result_model_type_wrap" style="margin-left:10px;">类型：<span id="predict_result_model_type">-</span></span>
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+
+{% endblock %}
+
+{% block js %}
+    <script>
+        $('#submit').click(function () {
+            var content = $('input[name="content"]').val();
+            var mid = $('#predict_model_id').val();
+            function isLikelyDepression(data) {
+                var label = String(data.label || '').toLowerCase();
+                if (label.indexOf('抑郁') >= 0 || label.indexOf('depr') >= 0) return true;
+                var rl = Number(data.risk_level);
+                if (!isNaN(rl) && rl >= 2) return true;
+                var sc = Number(data.final_score);
+                if (!isNaN(sc) && sc >= 0.65) return true;
+                return false;
+            }
+            $.ajax({
+                url: '{% url "predict" %}',
+                dataType: 'json',
+                method: 'post',
+                data: {
+                    'content': content,
+                    'model_id': mid,
+                    'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function (data) {
+                    if (data.status === 1) {
+                        var likely = isLikelyDepression(data);
+                        var mainText = likely ? '结论：该文本疑似抑郁，请及时关注。' : '结论：该文本未见明显抑郁倾向。';
+                        var scoreText = '-';
+                        if (data.final_score !== undefined && data.final_score !== null && data.final_score !== '') {
+                            scoreText = Number(data.final_score).toFixed(4);
+                        }
+                        $('#predict_result_main')
+                            .removeClass('ok warn')
+                            .addClass(likely ? 'warn' : 'ok')
+                            .text(mainText);
+                        $('#predict_result_label').text(data.label || '-');
+                        $('#predict_result_risk').text(
+                            (data.risk_level !== undefined && data.risk_level !== null) ? data.risk_level : '-'
+                        );
+                        $('#predict_result_score').text(scoreText);
+                        $('#predict_result_model').text((data.model_name || '-') + ' / ' + (data.model_version || '-'));
+                        $('#predict_result_model_type').text(data.model_type_display || '-');
+                        $('#predict_result_box').show();
+                    } else {
+                        alert(data.msg || '预测失败');
+                    }
+                },
+                error: function (xhr) {
+                    var msg = '请求失败';
+                    try {
+                        var j = JSON.parse(xhr.responseText);
+                        if (j.msg) msg = j.msg;
+                    } catch (e) {}
+                    alert(msg);
+                }
+            });
+            return false;
+        });
+    </script>
+    <script src="/static/js/echarts.min.js"></script>
+
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+<!--  title -->
+{% block title %}  {{ block.super }}   {% endblock %}
+<!--  css -->
+{% block css %}
+    <style>
+    </style>
+{% endblock %}
+<!--  内容 -->
+{% block content %}
+    <div class="panel panel-danger">
+        <div class="panel-heading" style="background-color:#0367cc;color: white">
+            <h3 class="panel-title">可视化</h3>
+        </div>
+        <div class="panel-body">
+            <div id="container" style="height: 500px"></div>
+        </div>
+    </div>
+
+
+
+{% endblock %}
+<!--  js -->
+{% block js %}
+    <script src="/static/js/echarts.min.js"></script>
+    <script src="/static/js/macarons.js"></script>
+    <script type="text/javascript">
+        var dom = document.getElementById("container");
+        var myChart = echarts.init(dom);
+        // 数据
+
+        var data = [
+            [10.0, 8.04],
+            [8.07, 6.95],
+            [13.0, 7.58],
+            [9.05, 8.81],
+            [11.0, 8.33],
+            [14.0, 7.66],
+        ]
+        data = {{ data | safe }};
+
+        var option;
+        option = {
+            title: {
+                text: '散点图',
+                left: 'center',
+            },
+            xAxis: {},
+            yAxis: {},
+            series: [
+                {
+                    symbolSize: 5,
+                    data: data,
+                    type: 'scatter',
+                    encode: {tooltip: [0, 1]},
+                }
+            ]
+        };
+        if (option && typeof option === 'object') {
+            myChart.setOption(option);
+        }
+        //网页大小调整时，图表也调整
+        window.addEventListener('resize', myChart.resize);
+    </script>
+{% endblock %}

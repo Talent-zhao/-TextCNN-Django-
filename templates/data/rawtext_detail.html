@@ -1,0 +1,38 @@
+{% extends "admin_base.html" %}
+{% block title %}文本详情{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">RawText 详情 #{{ raw_obj.id }}</h3></div>
+    <div class="panel-body">
+        <p><strong>来源：</strong>{% if raw_obj.source %}{{ raw_obj.source.name }}{% else %}-{% endif %}</p>
+        <p><strong>作者：</strong>{{ raw_obj.author_name|default:"-" }}</p>
+        <p><strong>发布时间：</strong>{{ raw_obj.publish_time|default:"-" }}</p>
+        <p><strong>状态：</strong>{{ raw_obj.get_status_display }}</p>
+        <p><strong>去重哈希：</strong><code>{{ raw_obj.dedup_hash }}</code></p>
+        <hr>
+        <p><strong>原始文本：</strong></p>
+        <div class="well">{{ raw_obj.content }}</div>
+
+        <p><strong>清洗结果：</strong></p>
+        {% if clean_obj %}
+            <div class="well">{{ clean_obj.cleaned_content }}</div>
+        {% else %}
+            <div class="alert alert-warning">暂无清洗结果</div>
+        {% endif %}
+
+        <p><strong>标注记录数：</strong>{{ raw_obj.annotations.count }}</p>
+        <p><strong>预测记录数：</strong>{{ raw_obj.predictions.count }}</p>
+        <div style="margin-top:12px;">
+            {% if can_clean_here %}
+            <form method="post" action="" style="display:inline;margin-right:8px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="clean">
+                <button type="submit" class="btn btn-success">清洗（未清洗 → 已清洗）</button>
+            </form>
+            {% endif %}
+            <a href="{% url 'rawtext_list' %}" class="btn btn-default">返回列表</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

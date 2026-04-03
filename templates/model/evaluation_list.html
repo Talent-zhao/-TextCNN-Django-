@@ -1,0 +1,79 @@
+{% extends "admin_base.html" %}
+{% block title %}评估结果{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">模型评估结果</h3></div>
+    <div class="panel-body">
+        {% if messages %}
+            {% for m in messages %}
+                <div class="alert alert-{% if m.level_tag == 'error' %}danger{% else %}{{ m.level_tag }}{% endif %}">{{ m }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <p class="text-muted">
+            <strong>网页「模型训练」或命令行训练成功结束后</strong>，会自动把<strong>验证集</strong>上的准确率、macro 精确率/召回率/F1、AUC、训练耗时、过拟合判断等写入本页。
+            与「在线预测」无直接联动。
+            <a href="{% url 'algorithm_compare' %}" class="btn btn-default btn-xs" style="margin-left:8px;">算法对比总表</a>
+            <a href="{% url 'model_list' %}" class="btn btn-default btn-xs">模型管理</a>
+        </p>
+
+        <h4 style="margin-top:1.25em;">按模型筛选</h4>
+        <form method="get" class="form-inline well well-sm" style="margin-bottom:20px;">
+            <label class="sr-only" for="filter_model_id">模型</label>
+            <select name="model_id" id="filter_model_id" class="form-control" style="min-width:240px;">
+                <option value="">全部记录</option>
+                {% for m in models %}
+                    <option value="{{ m.id }}" {% if filter_model_id == m.id %}selected{% endif %}>{{ m.name }} / {{ m.version }}（{{ m.get_model_type_display }}）</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-default">筛选</button>
+            {% if filter_model_id %}
+            <a href="{% url 'model_evaluation' %}" class="btn btn-link">清除筛选</a>
+            {% endif %}
+        </form>
+
+        <h4 style="margin-top:1.5em;">历史记录{% if filter_model_id %}（已筛选）{% endif %}</h4>
+        <div class="table-responsive">
+        <table class="table table-bordered table-hover table-condensed">
+            <thead>
+            <tr>
+                <th>模型</th>
+                <th>类型</th>
+                <th>记录版本</th>
+                <th>准确率</th>
+                <th>精确率</th>
+                <th>召回率</th>
+                <th>F1</th>
+                <th>AUC</th>
+                <th>训练(秒)</th>
+                <th>过拟合</th>
+                <th>评估时间</th>
+                <th>当时是否启用</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for r in rows %}
+                <tr>
+                    <td>{{ r.model_info.name }}</td>
+                    <td>{{ r.model_info.get_model_type_display }}</td>
+                    <td>{{ r.model_version }}</td>
+                    <td>{{ r.accuracy|floatformat:4 }}</td>
+                    <td>{{ r.precision|floatformat:4 }}</td>
+                    <td>{{ r.recall|floatformat:4 }}</td>
+                    <td>{{ r.f1_score|floatformat:4 }}</td>
+                    <td>{% if r.auc != None %}{{ r.auc|floatformat:4 }}{% else %}—{% endif %}</td>
+                    <td>{% if r.training_time_sec != None %}{{ r.training_time_sec|floatformat:1 }}{% else %}—{% endif %}</td>
+                    <td>{% if r.is_overfitting == True %}是{% elif r.is_overfitting == False %}否{% else %}—{% endif %}</td>
+                    <td>{{ r.evaluated_at|date:"Y-m-d H:i" }}</td>
+                    <td>{% if r.is_active_snapshot %}是{% else %}否{% endif %}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="12" class="text-center text-muted">暂无评估记录；完成训练后会自动写入。</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

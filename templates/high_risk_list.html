@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ block.super }}{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/lib/layui/css/layui.css">
+<style>
+    .risk-card { border: 1px solid #eee; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff; }
+    .risk-title { font-weight: 600; color: #333; margin-bottom: 8px; }
+    .risk-meta { color: #666; font-size: 12px; margin-top: 6px; }
+    .risk-badge { color: #fff; background: #c0392b; border-radius: 10px; padding: 2px 8px; margin-left: 8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+    <h2>高风险评论列表</h2>
+    <p>仅展示风险等级大于等于 {{ min_risk_level }} 的评论。</p>
+</div>
+
+<div class="col-sm-1"></div>
+<div class="col-sm-10">
+    <div style="margin-bottom: 12px;">
+        <a class="btn btn-default" href="{% url 'index' %}">返回首页</a>
+    </div>
+
+    {% for row in page_obj.object_list %}
+        <div class="risk-card">
+            <div class="risk-title">
+                {{ row.comment.content }}
+                <span class="risk-badge">风险等级 {{ row.prediction.risk_level }}</span>
+            </div>
+            <div>
+                标签：{{ row.prediction.predicted_label.name|default:"未标注" }}
+                &nbsp;|&nbsp; 风险分：{{ row.prediction.final_risk_score|floatformat:3 }}
+                &nbsp;|&nbsp; 关键词：{{ row.prediction.hit_keywords|default:"-" }}
+            </div>
+            <div class="risk-meta">
+                用户：{{ row.comment.name }} · 时间：{{ row.comment.time }} · 回复：{{ row.comment.reply }}
+                <br/>
+                模型：{% if row.prediction.model_info %}{{ row.prediction.model_info.name }} / {{ row.prediction.model_info.version }}{% else %}-{% endif %}
+                <br/>
+                <a href="{% url 'risk_detail' row.comment.id %}">查看风险详情</a>
+            </div>
+        </div>
+    {% empty %}
+        <div class="alert alert-info">暂无符合条件的高风险评论。</div>
+    {% endfor %}
+
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+          <li><a href="?page={{ page_obj.previous_page_number }}&min_risk_level={{ min_risk_level }}">&laquo;</a></li>
+        {% else %}
+          <li class="disabled"><span>&laquo;</span></li>
+        {% endif %}
+        <li class="active"><span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+          <li><a href="?page={{ page_obj.next_page_number }}&min_risk_level={{ min_risk_level }}">&raquo;</a></li>
+        {% else %}
+          <li class="disabled"><span>&raquo;</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+</div>
+<div class="col-sm-1"></div>
+{% endblock %}

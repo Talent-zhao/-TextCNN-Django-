@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}  {{ block.super }}   {% endblock %}
+
+{% block css %}
+    <style>
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="panel panel-primary">
+        <div class="panel-heading">修改密码</div>
+        <div class="panel-body">
+            <div>
+                {% for message in messages %}
+                    {% if message.tags == 'info' %}
+                        <div class="alert alert-success" role="alert">{{ message }}</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <form class="form-horizontal" style="width: 600px" method="post" action="{% url 'resetPWd' %}">
+                <input type="text" hidden value="{{ userinfo.id }}" name="pk">
+
+                <div class="form-group">
+                    <label for="pwd" class="col-sm-2 control-label">旧密码</label>
+                    <div class="col-sm-10">
+                        <input value="" name="pwd" type="password" class="form-control" id="pwd" placeholder="输入旧密码"
+                               required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="newpwd" class="col-sm-2 control-label">新密码</label>
+                    <div class="col-sm-10">
+                        <input name="newpwd" type="password" class="form-control" id="newpwd" placeholder="输入新密码"
+                               required>
+                    </div>
+                </div>
+
+
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <button type="submit" class="btn btn-danger">确定修改</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    <script>
+        $('.btn-danger').click(function () {
+
+        })
+    </script>
+{% endblock %}

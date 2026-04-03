@@ -1,0 +1,278 @@
+/* 登录注册页面样式 - 与主页风格一致 */
+body.auth-page {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background-color: #f5f5f5;
+    min-height: 100vh;
+    padding-top: 60px;
+}
+
+.auth-container {
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 0 15px;
+}
+
+.auth-panel {
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.24);
+    background: #fff;
+    overflow: hidden;
+}
+
+.auth-panel-heading {
+    background-color: #0069D3;
+    color: white;
+    padding: 15px;
+    border-bottom: 1px solid transparent;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.auth-panel-heading h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.auth-panel-body {
+    padding: 30px;
+}
+
+.auth-form-group {
+    margin-bottom: 20px;
+}
+
+.auth-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.auth-form-control {
+    display: block;
+    width: 100%;
+    height: 38px;
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+}
+
+.auth-form-control:focus {
+    border-color: #0069D3;
+    outline: 0;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(0, 105, 211, 0.3);
+}
+
+.auth-form-control::placeholder {
+    color: #999;
+}
+
+.password-wrapper {
+    position: relative;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #0069D3;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 5px;
+    z-index: 10;
+}
+
+.password-toggle-btn:hover {
+    color: #0080FF;
+}
+
+.password-toggle-btn:focus {
+    outline: none;
+}
+
+.btn-auth-primary {
+    display: inline-block;
+    padding: 10px 16px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    width: 100%;
+    color: #fff;
+    background-color: #0069D3;
+    border-color: #0069D3;
+    transition: all 0.3s ease;
+}
+
+.btn-auth-primary:hover,
+.btn-auth-primary:focus,
+.btn-auth-primary:active {
+    color: #fff;
+    background-color: #0080FF;
+    border-color: #0080FF;
+    text-decoration: none;
+}
+
+.btn-auth-primary:active {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-auth-success {
+    background-color: #5cb85c;
+    border-color: #4cae4c;
+}
+
+.btn-auth-success:hover,
+.btn-auth-success:focus,
+.btn-auth-success:active {
+    background-color: #449d44;
+    border-color: #398439;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    color: #666;
+    font-size: 14px;
+}
+
+.auth-footer a {
+    color: #0069D3;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-footer a:hover {
+    color: #0080FF;
+    text-decoration: underline;
+}
+
+.alert-auth {
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.alert-success {
+    color: #3c763d;
+    background-color: #dff0d8;
+    border-color: #d6e9c6;
+}
+
+.alert-danger {
+    color: #a94442;
+    background-color: #f2dede;
+    border-color: #ebccd1;
+}
+
+.alert-info {
+    color: #31708f;
+    background-color: #d9edf7;
+    border-color: #bce8f1;
+}
+
+.help-text {
+    display: block;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    color: #737373;
+    font-size: 12px;
+}
+
+.form-group.has-error .auth-form-control {
+    border-color: #a94442;
+}
+
+.form-group.has-error .help-text {
+    color: #a94442;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    body.auth-page {
+        padding-top: 20px;
+    }
+    
+    .auth-container {
+        margin: 20px auto;
+    }
+    
+    .auth-panel-body {
+        padding: 20px;
+    }
+}
+
+/* 加载状态 */
+.btn-auth-primary.loading {
+    position: relative;
+    color: transparent;
+    pointer-events: none;
+}
+
+.btn-auth-primary.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 页面标题区域 */
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-logo {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 15px;
+    background-color: #0069D3;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+}
+
+.auth-subtitle {
+    color: #666;
+    font-size: 14px;
+    margin-top: 10px;
+}

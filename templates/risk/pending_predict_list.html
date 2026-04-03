@@ -1,0 +1,109 @@
+{% extends "admin_base.html" %}
+{% block title %}待预测列表{% endblock %}
+
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">待预测列表（RawText）</h3></div>
+    <div class="panel-body">
+        <form id="pending-predict-post-form" method="post" action="{% url 'pending_predict_list' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="pp_action" value="">
+            <input type="hidden" name="raw_id" id="pp_raw_id" value="">
+            <input type="hidden" name="raw_ids" id="pp_raw_ids" value="">
+            <input type="hidden" name="model_id" id="pp_model_id" value="">
+        </form>
+        <div class="form-inline" style="margin-bottom: 10px;">
+            <label for="predict_model_select">预测模型：</label>
+            <select id="predict_model_select" class="form-control" style="min-width: 280px; margin-right: 8px;">
+                {% for m in model_options %}
+                    <option value="{{ m.id }}" {% if default_model_id == m.id %}selected{% endif %}>
+                        {{ m.name }} — {{ m.get_model_type_display }}{% if m.version %}（{{ m.version }}）{% endif %}{% if m.is_active %} [当前启用]{% endif %}
+                    </option>
+                {% empty %}
+                    <option value="">无可用模型</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-success" type="button" onclick="batchPredict()">批量预测</button>
+            <button class="btn btn-warning" type="button" onclick="batchPredictAll()">全部预测</button>
+        </div>
+        <table class="table table-bordered table-hover">
+            <thead>
+            <tr>
+                <th><input type="checkbox" id="check_all"></th>
+                <th>ID</th>
+                <th>文本</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in page_obj.object_list %}
+                <tr>
+                    <td><input type="checkbox" class="row_check" value="{{ row.id }}"></td>
+                    <td>{{ row.id }}</td>
+                    <td>{{ row.content|truncatechars:90 }}</td>
+                    <td>{{ row.get_status_display }}</td>
+                    <td><button type="button" class="btn btn-xs btn-primary" onclick="singlePredict({{ row.id }})">执行预测</button></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="text-center">暂无待预测数据</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+function submitPendingPredictForm() {
+    var modelId = $('#predict_model_select').val();
+    if (!modelId) {
+        alert('请先选择预测模型');
+        return;
+    }
+    document.getElementById('pp_model_id').value = modelId;
+    document.getElementById('pending-predict-post-form').submit();
+}
+
+function singlePredict(id) {
+    var n = parseInt(id, 10);
+    if (isNaN(n)) {
+        alert('无效的文本 ID');
+        return;
+    }
+    document.getElementById('pp_action').value = 'single_predict';
+    document.getElementById('pp_raw_id').value = String(n);
+    document.getElementById('pp_raw_ids').value = '';
+    submitPendingPredictForm();
+}
+
+function batchPredict() {
+    var ids = $('.row_check:checked').map(function () { return $(this).val(); }).get().join(',');
+    if (!ids) {
+        alert('请先勾选数据');
+        return;
+    }
+    document.getElementById('pp_action').value = 'batch_predict';
+    document.getElementById('pp_raw_id').value = '';
+    document.getElementById('pp_raw_ids').value = ids;
+    submitPendingPredictForm();
+}
+
+function batchPredictAll() {
+    if (!confirm('确定对当前全部待预测数据执行预测？')) {
+        return;
+    }
+    document.getElementById('pp_action').value = 'batch_predict_all';
+    document.getElementById('pp_raw_id').value = '';
+    document.getElementById('pp_raw_ids').value = '';
+    submitPendingPredictForm();
+}
+
+$(function () {
+    $('#check_all').on('change', function () {
+        $('.row_check').prop('checked', $(this).prop('checked'));
+    });
+});
+</script>
+{% endblock %}

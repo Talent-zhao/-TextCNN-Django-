@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+<!--  title -->
+{% block title %}  {{ block.super }}   {% endblock %}
+<!--  css -->
+{% block css %}
+    <style>
+    </style>
+{% endblock %}
+<!--  内容 -->
+{% block content %}
+    <div class="panel panel-danger">
+        <div class="panel-heading" style="background-color:#0367cc;color: white">
+            <h3 class="panel-title">可视化</h3>
+        </div>
+        <div class="panel-body">
+            <div id="container" style="height: 500px"></div>
+        </div>
+    </div>
+
+  
+
+{% endblock %}
+<!--  js -->
+{% block js %}
+    <script src="/static/js/echarts.min.js"></script>
+    <script src="/static/js/macarons.js"></script>
+    <script type="text/javascript">
+        var dom = document.getElementById("container");
+        var myChart = echarts.init(dom, 'macarons');
+        // 数据
+        var x_data = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        var y_data = [150, 230, 224, 218, 135, 147, 260]
+        x_data = {{ x_data | safe }};
+        y_data = {{ y_data | safe }};
+        var option;
+        option = {
+            //提示
+            tooltip: {
+                trigger: 'axis',
+                //trigger: 'item',
+            },
+            // 伸缩
+            dataZoom: [{type: 'inside'}, {type: 'slider'}],
+            xAxis: {
+                type: 'category',
+                data: x_data
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [
+                {
+                    data: y_data,
+                    type: 'line'
+                }
+            ]
+        };
+        if (option && typeof option === 'object') {
+            myChart.setOption(option);
+        }
+        //网页大小调整时，图表也调整
+        window.addEventListener('resize', myChart.resize);
+    </script>
+{% endblock %}
