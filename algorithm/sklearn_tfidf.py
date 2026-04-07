@@ -15,9 +15,23 @@ def predict_tfidf_sklearn(text, clf_path, vec_path, num2name_path, preprocess_fn
     """
     preprocess_fn = preprocess_fn or preprocess_pipeline
     if not clf_path or not vec_path:
-        return {'enabled': True, 'available': False, 'label': None, 'prob': 0.0, 'error': 'path empty'}
+        return {
+            'enabled': True,
+            'available': False,
+            'label': None,
+            'prob': 0.0,
+            'proba_by_label': {},
+            'error': 'path empty',
+        }
     if not os.path.exists(clf_path) or not os.path.exists(vec_path):
-        return {'enabled': True, 'available': False, 'label': None, 'prob': 0.0, 'error': 'model/vectorizer missing'}
+        return {
+            'enabled': True,
+            'available': False,
+            'label': None,
+            'prob': 0.0,
+            'proba_by_label': {},
+            'error': 'model/vectorizer missing',
+        }
 
     try:
         model = joblib.load(clf_path)
@@ -28,6 +42,28 @@ def predict_tfidf_sklearn(text, clf_path, vec_path, num2name_path, preprocess_fn
         pred_num = str(model.predict(x)[0])
         pred_name = num2name.get(pred_num, pred_num)
         prob = float(max(model.predict_proba(x)[0])) if hasattr(model, 'predict_proba') else 0.6
-        return {'enabled': True, 'available': True, 'label': pred_name, 'prob': prob, 'error': ''}
+        proba_by_label = {}
+        if hasattr(model, 'predict_proba'):
+            row_p = model.predict_proba(x)[0]
+            cls_list = getattr(model, 'classes_', None)
+            if cls_list is not None:
+                for i, c in enumerate(cls_list):
+                    key = num2name.get(str(c), str(c))
+                    proba_by_label[str(key)] = float(row_p[i])
+        return {
+            'enabled': True,
+            'available': True,
+            'label': pred_name,
+            'prob': prob,
+            'proba_by_label': proba_by_label,
+            'error': '',
+        }
     except Exception as e:
-        return {'enabled': True, 'available': False, 'label': None, 'prob': 0.0, 'error': str(e)}
+        return {
+            'enabled': True,
+            'available': False,
+            'label': None,
+            'prob': 0.0,
+            'proba_by_label': {},
+            'error': str(e),
+        }

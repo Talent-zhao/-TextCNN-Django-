@@ -29,9 +29,11 @@ from app.registry_names import (
     FUSION_STRATEGY_MODEL_TYPE,
     SOURCE_ALGO_TYPES,
     is_canonical_fusion_registry_row,
+    is_primary_fusion_system_sync_row,
     registry_display_label,
     source_algo_modelinfo_name_set,
 )
+from app.services.fusion_strategy_report import get_cached_fusion_strategy_report, report_to_table_row
 from app.services.model_health_service import ModelHealthService
 from app.services.predict_service import PredictService
 from app.userViews import check_admin_access, get_admin_panel_user
@@ -132,8 +134,90 @@ def _format_train_sec(sec):
     return '{:.2f} 小时'.format(s / 3600.0)
 
 
+def _fmt_metric_4(x):
+    if x is None:
+        return '—'
+    return '{:.4f}'.format(float(x))
+
+
+def _build_compare_row_cells(ev, mi):
+    """
+    从最新评估记录 ev 与兜底 ModelInfo mi 组装对比表指标单元（与评估记录、metrics_json 优先级一致）。
+    ev 可为 None；mi 可为 None（则仅 mj_mi 为空 dict）。
+    """
+    mj_ev = _metrics_json_dict(ev.model_info) if ev else {}
+    mj_mi = _metrics_json_dict(mi) if mi else {}
+
+    acc = _pick_float(
+        ev.accuracy if ev else None,
+        mj_ev.get('accuracy'),
+        mj_mi.get('accuracy'),
+    )
+    prec = _pick_float(
+        ev.precision if ev else None,
+        mj_ev.get('precision'),
+        mj_mi.get('precision'),
+    )
+    rec = _pick_float(
+        ev.recall if ev else None,
+        mj_ev.get('recall'),
+        mj_mi.get('recall'),
+    )
+    f1v = _pick_float(
+        ev.f1_score if ev else None,
+        mj_ev.get('f1_score'),
+        mj_ev.get('f1'),
+        mj_mi.get('f1_score'),
+        mj_mi.get('f1'),
+    )
+    auc = _pick_float(
+        ev.auc if ev else None,
+        mj_ev.get('auc'),
+        mj_ev.get('roc_auc'),
+        mj_mi.get('auc'),
+        mj_mi.get('roc_auc'),
+    )
+    train_sec = _pick_float(
+        ev.training_time_sec if ev else None,
+        mj_ev.get('training_time_sec'),
+        mj_ev.get('train_seconds'),
+        mj_mi.get('training_time_sec'),
+        mj_mi.get('train_seconds'),
+    )
+
+    over = None
+    if ev and ev.is_overfitting is not None:
+        over = ev.is_overfitting
+    if over is None:
+        over = _overfit_from_json(mj_ev)
+    if over is None:
+        over = _overfit_from_json(mj_mi)
+
+    over_txt = '—'
+    if over is True:
+        over_txt = '是'
+    elif over is False:
+        over_txt = '否'
+
+    return {
+        'accuracy': _fmt_metric_4(acc),
+        'precision': _fmt_metric_4(prec),
+        'recall': _fmt_metric_4(rec),
+        'f1': _fmt_metric_4(f1v),
+        'auc': _fmt_metric_4(auc),
+        'train_time': _format_train_sec(train_sec) or '—',
+        'overfitting': over_txt,
+        'eval_at': ev.evaluated_at if ev else None,
+        'model_label': (
+            '{} / {}'.format(ev.model_info.name, ev.model_version)
+            if ev
+            else (mi.name if mi else None)
+        ),
+    }
+
+
 def build_algorithm_compare_rows():
-    """按算法类型汇总：优先该类型下最新一条 ModelEvaluation，缺项用 model_info.metrics_json 补齐。"""
+    """源算法：按七种 model_type 各取最新一条 ModelEvaluation，缺项用对应 ModelInfo.metrics_json 补齐。"""
     rows = []
     for key, display_name in ALGO_COMPARE_DEFS:
         ev = (
@@ -143,84 +227,33 @@ def build_algorithm_compare_rows():
             .first()
         )
         mi = ModelInfo.objects.filter(model_type=key).order_by('-is_active', '-created_at').first()
-        mj_ev = _metrics_json_dict(ev.model_info) if ev else {}
-        mj_mi = _metrics_json_dict(mi) if mi else {}
-
-        acc = _pick_float(
-            ev.accuracy if ev else None,
-            mj_ev.get('accuracy'),
-            mj_mi.get('accuracy'),
-        )
-        prec = _pick_float(
-            ev.precision if ev else None,
-            mj_ev.get('precision'),
-            mj_mi.get('precision'),
-        )
-        rec = _pick_float(
-            ev.recall if ev else None,
-            mj_ev.get('recall'),
-            mj_mi.get('recall'),
-        )
-        f1v = _pick_float(
-            ev.f1_score if ev else None,
-            mj_ev.get('f1_score'),
-            mj_ev.get('f1'),
-            mj_mi.get('f1_score'),
-            mj_mi.get('f1'),
-        )
-        auc = _pick_float(
-            ev.auc if ev else None,
-            mj_ev.get('auc'),
-            mj_ev.get('roc_auc'),
-            mj_mi.get('auc'),
-            mj_mi.get('roc_auc'),
-        )
-        train_sec = _pick_float(
-            ev.training_time_sec if ev else None,
-            mj_ev.get('training_time_sec'),
-            mj_ev.get('train_seconds'),
-            mj_mi.get('training_time_sec'),
-            mj_mi.get('train_seconds'),
-        )
-
-        over = None
-        if ev and ev.is_overfitting is not None:
-            over = ev.is_overfitting
-        if over is None:
-            over = _overfit_from_json(mj_ev)
-        if over is None:
-            over = _overfit_from_json(mj_mi)
-
-        def _fmt4(x):
-            if x is None:
-                return '—'
-            return '{:.4f}'.format(float(x))
-
-        over_txt = '—'
-        if over is True:
-            over_txt = '是'
-        elif over is False:
-            over_txt = '否'
-
+        cells = _build_compare_row_cells(ev, mi)
         rows.append(
             {
                 'key': key,
                 'name': display_name,
-                'accuracy': _fmt4(acc),
-                'precision': _fmt4(prec),
-                'recall': _fmt4(rec),
-                'f1': _fmt4(f1v),
-                'auc': _fmt4(auc),
-                'train_time': _format_train_sec(train_sec) or '—',
-                'overfitting': over_txt,
-                'eval_at': ev.evaluated_at if ev else None,
-                'model_label': (
-                    '{} / {}'.format(ev.model_info.name, ev.model_version)
-                    if ev
-                    else (mi.name if mi else None)
-                ),
+                **cells,
             }
         )
+    return rows
+
+
+def build_fusion_strategy_compare_rows():
+    """
+    融合策略宽表：默认验证集上按基模型类概率加权融合，输出分类与概率校准类指标（见 fusion_strategy_report）。
+    排除占位「线下评估记录 / default」。
+    """
+    rows = []
+    qs = (
+        ModelInfo.objects.filter(model_type='fusion')
+        .exclude(name=EVAL_RECORD_NAME, version=EVAL_RECORD_VERSION)
+        .order_by('-is_active', '-created_at', '-id')
+    )
+    for mi in qs:
+        rep = get_cached_fusion_strategy_report(mi)
+        row = report_to_table_row(rep)
+        row['id'] = mi.id
+        rows.append(row)
     return rows
 
 
@@ -368,13 +401,9 @@ def _fusion_strategy_list_summary(mi):
     return line1 + '\n' + line2
 
 
-def sync_modelinfo_paths_from_fusion_config():
-    """
-    维护唯一一条 model_type=fusion、名称「融合策略」的登记：在 metrics_json 汇总
-    各子模型路径与 enable/weight，并计算启用项上的归一化权重比率。在线预测仍以 SystemConfig 为准。
-    """
+def _build_fusion_snapshot_dict_for_cfg(cfg):
+    """由已合并的运行时 cfg 生成 metrics_json 内 fusion_snapshot 的数据体。"""
     PredictService.ensure_default_runtime_config()
-    cfg = PredictService.get_runtime_config(None)
 
     def _vec_sklearn(mt):
         row = SystemConfig.objects.filter(key='tfidf_vectorizer_path_{}'.format(mt)).first()
@@ -400,8 +429,8 @@ def sync_modelinfo_paths_from_fusion_config():
 
     keys_weight = [k for k in sorted(PredictService.DEFAULT_RUNTIME_CONFIG) if k.startswith('weight_')]
     keys_enable = [k for k in sorted(PredictService.DEFAULT_RUNTIME_CONFIG) if k.startswith('enable_')]
-    weights = {k: cfg[k] for k in keys_weight}
-    enables = {k: cfg[k] for k in keys_enable}
+    weights = {k: cfg.get(k) for k in keys_weight}
+    enables = {k: cfg.get(k) for k in keys_enable}
 
     role_meta = [
         ('svm', 'weight_svm', 'enable_svm'),
@@ -430,7 +459,7 @@ def sync_modelinfo_paths_from_fusion_config():
         if cfg.get(ek) and wv > 0 and total_w > 0:
             ratios_norm[role] = wv / total_w
 
-    snapshot = {
+    return {
         'paths': paths,
         'weights': weights,
         'enables': enables,
@@ -438,14 +467,51 @@ def sync_modelinfo_paths_from_fusion_config():
         'updated_at': timezone.now().isoformat(),
     }
 
+
+def _create_autonamed_fusion_registration_after_runtime_save():
+    """
+    「预测融合设置」保存成功后：按 策略模型01/02… 自动命名新增一条融合登记，
+    metrics_json 写入当前全局 runtime 对应的 fusion_snapshot（与主登记「融合策略」内容一致）。
+    """
+    from app.registry_names import next_autonamed_fusion_strategy_model_name
+
+    PredictService.ensure_default_runtime_config()
+    cfg = PredictService.get_runtime_config(None)
+    snap_d = _build_fusion_snapshot_dict_for_cfg(cfg)
+    name = next_autonamed_fusion_strategy_model_name()
+    ModelInfo.objects.create(
+        name=name,
+        version=FUSION_STRATEGY_MODELINFO_VERSION,
+        model_type=FUSION_STRATEGY_MODEL_TYPE,
+        status='ready',
+        is_active=False,
+        listed_for_users=False,
+        file_path=None,
+        vectorizer_path=None,
+        description='由「预测融合设置」保存自动生成',
+        config_json='{}',
+        metrics_json=json.dumps({'fusion_snapshot': snap_d}, ensure_ascii=False, indent=2),
+    )
+    return name
+
+
+def sync_modelinfo_paths_from_fusion_config():
+    """
+    维护名称严格为「融合策略」、version=default 的登记：在 metrics_json 汇总
+    各子模型路径与 enable/weight。其他名称的融合策略登记不会被本函数覆盖。在线预测对任一条融合登记会合并其 metrics_json.fusion_snapshot。
+    """
+    PredictService.ensure_default_runtime_config()
+    cfg = PredictService.get_runtime_config(None)
+    snapshot = _build_fusion_snapshot_dict_for_cfg(cfg)
     snapshot_json = json.dumps({'fusion_snapshot': snapshot}, ensure_ascii=False, indent=2)
     desc = (
-        '单条登记：汇总「预测融合设置」子模型路径与各算法权重；启用项权重归一化比率见 metrics_json.fusion_snapshot。'
+        '全局快照登记（名称须为「融合策略」）：汇总「预测融合设置」；启用项归一化比率见 fusion_snapshot。'
     )
 
     qs = ModelInfo.objects.filter(
         model_type=FUSION_STRATEGY_MODEL_TYPE,
         version=FUSION_STRATEGY_MODELINFO_VERSION,
+        name=FUSION_STRATEGY_MODELINFO_NAME,
     )
     if not qs.exists():
         ModelInfo.objects.create(
@@ -1208,13 +1274,34 @@ class ModelEditView(View):
             'status': request.POST.get('status', 'ready'),
             'listed_for_users': request.POST.get('listed_for_users') == 'on',
         }
-        if is_fusion_strategy:
+        if is_primary_fusion_system_sync_row(row):
             payload.pop('metrics_json', None)
 
         ModelInfo.objects.filter(id=model_id).update(**payload)
         sync_modelinfo_paths_from_fusion_config()
+        row_saved = ModelInfo.objects.filter(id=model_id).first()
+        if (
+            row_saved
+            and row_saved.model_type == FUSION_STRATEGY_MODEL_TYPE
+            and not is_primary_fusion_system_sync_row(row_saved)
+        ):
+            cfg_snap = PredictService.get_runtime_config(row_saved)
+            snap_d = _build_fusion_snapshot_dict_for_cfg(cfg_snap)
+            try:
+                root = json.loads(row_saved.metrics_json or '{}')
+            except Exception:
+                root = {}
+            if not isinstance(root, dict):
+                root = {}
+            root['fusion_snapshot'] = snap_d
+            ModelInfo.objects.filter(id=model_id).update(
+                metrics_json=json.dumps(root, ensure_ascii=False, indent=2)
+            )
         _touch_autosave_preset()
-        messages.info(request, '已保存：模型登记与「预测融合设置」中的对应参数已一并写回 SystemConfig，并刷新了融合策略快照。')
+        messages.info(
+            request,
+            '已保存：模型参数已写回；「融合策略」主登记已同步全局快照；其他名称的融合登记已按当前参数刷新 fusion_snapshot。',
+        )
         return redirect('model_list')
 
 
@@ -1254,9 +1341,11 @@ class RuntimeConfigView(View):
                     row.value = val[:255]
                     row.save(update_fields=['value', 'updated_at'])
         sync_modelinfo_paths_from_fusion_config()
+        auto_name = _create_autonamed_fusion_registration_after_runtime_save()
         messages.info(
             request,
-            '已保存。之后新的预测会按当前设置执行；「数据库中的模型登记」中各算法路径已按当前融合配置更新。',
+            '已保存。新预测将按当前设置执行；主登记「融合策略」已同步；'
+            '已自动新增策略登记「{}」（可在模型管理中编辑或删除）。'.format(auto_name),
         )
         return redirect('runtime_config')
 
@@ -1311,6 +1400,7 @@ class AlgorithmCompareView(View):
             {
                 'userinfo': userinfo,
                 'compare_rows': build_algorithm_compare_rows(),
+                'fusion_compare_rows': build_fusion_strategy_compare_rows(),
             },
         )
 

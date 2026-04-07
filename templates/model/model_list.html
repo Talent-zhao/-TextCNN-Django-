@@ -80,11 +80,11 @@
 
         <h4 id="db-model-registry" style="margin-top:1.75em;">数据库中的模型登记</h4>
         <p class="text-muted small">
-            <strong>登记类别</strong>：<strong>源算法模型</strong>对应「模型训练」所选基础算法；<strong>融合策略模型</strong>对应类型为「融合策略模型」且版本为 <code>default</code> 的登记（名称可自定义，如「融合策略002」），汇总多算法路径与<strong>启用/权重及归一化比率</strong>；保存融合页或应用快照时会更新<strong>所有</strong>该类登记行的快照且<strong>不会改名</strong>。
-            <strong>路径来源</strong>：该条内各子模型路径快照与
-            <a href="{% url 'runtime_config' %}">预测融合设置</a>
-            →「高级 · 模型文件路径」<strong>一致</strong>。
-            可选补充登记不影响通过融合配置实际加载 <code>model/</code> 文件。仅支持编辑已有记录，不提供手动员增入口。
+            <strong>登记类别</strong>：<strong>源算法模型</strong>对应「模型训练」所选基础算法；<strong>融合策略模型</strong>对应类型为「融合策略模型」且版本为 <code>default</code> 的登记。
+            在 <a href="{% url 'runtime_config' %}">预测融合设置</a> 中<strong>保存</strong>后，系统会按 <strong>策略模型01、策略模型02</strong>… 自动<strong>新增</strong>一条融合登记并写入本次快照；主登记名称「<strong>融合策略</strong>」仍由同一次保存同步全局快照。
+            其它手动创建的融合登记在<strong>保存编辑</strong>后单独刷新 <code>fusion_snapshot</code>。
+            <strong>路径来源</strong>：登记内快照与「预测融合设置」当前项应对齐。
+            可选补充登记不影响通过融合配置实际加载 <code>model/</code> 文件。
             <strong>训练侧</strong>：训练成功写盘后可能按 macro F1 更新<strong>源算法模型</strong>行路径；之后在融合页保存一次，<strong>融合策略模型</strong>单条登记会按当前融合配置重写快照。
             <strong>前台可见</strong>：勾选后该条登记会出现在前台「在线预测」列表与用户算法授权；与<strong>启用</strong>（全局默认）无关。
         </p>

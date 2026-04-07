@@ -115,6 +115,13 @@ WSGI_APPLICATION = 'DjangoWeb.wsgi.application'
 
 DATABASES = config.DATABASES
 
+# 默认内存缓存（融合策略离线对比等指标缓存；未配置时 Django 为 DummyCache 会导致每次全量重算）
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'django-web-locmem',
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

@@ -10,8 +10,10 @@
         <p>
             <a href="{% url 'algorithm_experiment_record_list' %}" class="btn btn-primary btn-sm">实验记录管理</a>
         </p>
+
+        <h4 style="margin-top:18px;">源算法模型对比</h4>
         <p class="text-muted">
-            每行对应一种算法类型。指标优先取该类型下<strong>最新一条</strong>「评估结果」记录；若某项为空，会尝试从对应「模型管理」条目的 <code>metrics_json</code> 中读取。
+            每行对应一种<strong>源算法</strong>类型（SVM、KNN、树模型、TextCNN 等）。指标优先取该类型下<strong>最新一条</strong>「评估结果」记录；若某项为空，会尝试从对应「模型管理」条目的 <code>metrics_json</code> 中读取。
             <strong>是否过拟合</strong>：由训练脚本自动写入时，规则为「训练集准确率 − 验证集准确率 &gt; 6%」则显示<strong>是</strong>，否则<strong>否</strong>（与写入评估时的模型快照一致）。
             缺项可继续在「模型管理」对应条目的 <code>metrics_json</code> 中补充键值（见 <code>docs/算法逻辑与配置说明.md</code>）。
         </p>
@@ -52,6 +54,104 @@
         <p class="text-muted small" style="margin-top:10px;">
             训练时间以评估记录中的「秒」换算显示；未填写时显示为 —。
         </p>
+
+        <h4 style="margin-top:28px;">融合策略对比参数表（分类任务，输出概率）</h4>
+        <p class="text-muted">
+            每行一条 <code>融合策略模型</code> 登记。在验证集 <code>datasets/depression_nlp/zh/oesd_keyword_binary/splits/val.csv</code> 上，对各基模型的 <strong>类概率</strong>（sklearn <code>predict_proba</code> / TextCNN·TextRCNN softmax）按当前配置的权重做加权平均得到融合分布；预测类为融合分布的 argmax。
+            分类指标为 <strong>宏平均（macro）</strong>。AUC：二分类以「depression_related」为正类；多分类为 One-vs-Rest 宏平均。
+            <strong>随机种子 F1 标准差</strong>：当前为固定权重无重训练，表中为验证集 <strong>自助重采样</strong>（默认 15 次，环境变量 <code>FUSION_COMPARE_BOOTSTRAP</code>）下 macro F1 的标准差，用于粗略反映稳定性。留一基模型评测较慢，可设 <code>FUSION_COMPARE_SKIP_LOO=1</code> 跳过。
+            环境变量：<code>FUSION_COMPARE_MAX_SAMPLES</code>（默认 800）、<code>DEPRESSION_WEB_SKIP_FUSION_COMPARE_EVAL=1</code> 关闭整张表计算。结果按配置签名与 CSV 修改时间缓存。
+        </p>
+        <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table table-bordered table-striped table-condensed" style="margin-top:12px; font-size:12px;">
+                <thead>
+                <tr>
+                    <th>策略名称</th>
+                    <th class="text-right">准确率</th>
+                    <th class="text-right">精确率</th>
+                    <th class="text-right">召回率</th>
+                    <th class="text-right">F1-score</th>
+                    <th class="text-right">AUC-ROC</th>
+                    <th class="text-right">Log-loss</th>
+                    <th class="text-right">SVM权重</th>
+                    <th class="text-right">KNN权重</th>
+                    <th class="text-right">决策树权重</th>
+                    <th class="text-right">随机森林权重</th>
+                    <th class="text-right">逻辑回归权重</th>
+                    <th class="text-right">TextCNN权重</th>
+                    <th class="text-right">TextRCNN权重</th>
+                    <th class="text-right">权重分布熵</th>
+                    <th class="text-right">留一基模型F1下降均值(%)</th>
+                    <th class="text-right">随机种子F1标准差</th>
+                    <th class="text-right">Brier Score</th>
+                    <th class="text-right">推理时间(ms/样本)</th>
+                    <th class="text-right">模型总大小(MB)</th>
+                    <th class="text-right">训练总耗时(s)</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% if fusion_compare_rows %}
+                {% for row in fusion_compare_rows %}
+                <tr>
+                    <td>
+                        <strong>{{ row.strategy_name }}</strong>
+                        {% if row.n_samples_note %}
+                        <br><small class="text-muted">n={{ row.n_samples_note }}{% if row.csv_rel %} · {{ row.csv_rel }}{% endif %}</small>
+                        {% endif %}
+                        {% if row.error_note %}
+                        <br><small class="text-warning">{{ row.error_note }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-right">{{ row.accuracy }}</td>
+                    <td class="text-right">{{ row.precision }}</td>
+                    <td class="text-right">{{ row.recall }}</td>
+                    <td class="text-right">{{ row.f1 }}</td>
+                    <td class="text-right">{{ row.auc }}</td>
+                    <td class="text-right">{{ row.log_loss }}</td>
+                    <td class="text-right">{{ row.w_svm }}</td>
+                    <td class="text-right">{{ row.w_knn }}</td>
+                    <td class="text-right">{{ row.w_dt }}</td>
+                    <td class="text-right">{{ row.w_rf }}</td>
+                    <td class="text-right">{{ row.w_lr }}</td>
+                    <td class="text-right">{{ row.w_textcnn }}</td>
+                    <td class="text-right">{{ row.w_textrcnn }}</td>
+                    <td class="text-right">{{ row.weight_entropy }}</td>
+                    <td class="text-right">{{ row.loo_f1_drop }}</td>
+                    <td class="text-right">{{ row.bootstrap_f1_std }}</td>
+                    <td class="text-right">{{ row.brier }}</td>
+                    <td class="text-right">{{ row.infer_ms }}</td>
+                    <td class="text-right">{{ row.model_size_mb }}</td>
+                    <td class="text-right">{{ row.train_total_sec }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="21" class="text-muted text-center">暂无 <code>融合策略模型</code> 登记。</td>
+                </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <h4 style="margin-top:24px;">参数详细说明</h4>
+        <div class="table-responsive">
+            <table class="table table-bordered table-condensed" style="font-size:13px;">
+                <thead><tr><th style="width:22%;">参数</th><th>解释</th></tr></thead>
+                <tbody>
+                <tr><td>准确率 / 精确率 / 召回率 / F1-score</td><td>标准分类指标；本表为验证集上 <strong>宏平均（macro）</strong>。</td></tr>
+                <tr><td>AUC-ROC</td><td>二分类关注抑郁相关类；多分类为 OvR 宏平均 AUC。</td></tr>
+                <tr><td>Log-loss</td><td>基于融合类概率与真实标签的对数损失，越低越好。</td></tr>
+                <tr><td>各模型权重</td><td>仅对<strong>当前已启用且 weight&gt;0</strong>的基模型，按其配置权重在<strong>参与者内部</strong>归一化（未参与者显示 0）；与概率融合时对参与项的加权一致。规则不参与本表概率融合列。</td></tr>
+                <tr><td>权重分布熵</td><td>H = −∑ p<sub>i</sub> log<sub>2</sub> p<sub>i</sub>，p<sub>i</sub> 为上述七维归一化权重；仅统计 p<sub>i</sub>&gt;0 的项。熵越大表示权重越分散。</td></tr>
+                <tr><td>留一基模型F1下降均值</td><td>依次关闭某一基模型（权重置 0、与线上一致按剩余权重归一化融合），在<strong>同一验证集</strong>上重算 macro F1，相对完整融合 F1 的降幅百分比取平均。值越小通常表示对单模型依赖越低。可通过 <code>FUSION_COMPARE_SKIP_LOO=1</code> 关闭以加速。</td></tr>
+                <tr><td>随机种子F1标准差</td><td>固定权重下，对验证集标签与预测做自助重采样得到 macro F1 的标准差（近似稳定性）；非「重训练融合」含义。</td></tr>
+                <tr><td>Brier Score</td><td>多分类 Brier：对每个样本求各类 (one-hot − 融合概率)² 再对类求和、对样本取平均。</td></tr>
+                <tr><td>推理时间(ms/样本)</td><td>单次 <code>build_result_map</code>（各基模型前向）墙钟时间的样本均值。</td></tr>
+                <tr><td>模型总大小(MB)</td><td>当前启用基模型在磁盘上的权重与向量器/词表文件大小之和（近似）。</td></tr>
+                <tr><td>训练总耗时(s)</td><td>各启用基模型在库中<strong>该类型最新一条</strong> <code>ModelEvaluation.training_time_sec</code> 之和；若无记录则为 —。</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

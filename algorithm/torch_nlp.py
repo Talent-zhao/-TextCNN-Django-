@@ -187,7 +187,18 @@ def predict_textcnn(text, weight_path, vocab_path, num2name_path, cfg):
 
         num2name = load_num2name(num2name_path or '')
         pred_name = num2name.get(str(pred_idx), str(pred_idx))
-        return {'enabled': True, 'available': True, 'label': pred_name, 'prob': pred_prob, 'error': ''}
+        proba_by_label = {}
+        for idx in range(int(probs.shape[0])):
+            nm = num2name.get(str(idx), str(idx))
+            proba_by_label[str(nm)] = float(probs[idx].item())
+        return {
+            'enabled': True,
+            'available': True,
+            'label': pred_name,
+            'prob': pred_prob,
+            'proba_by_label': proba_by_label,
+            'error': '',
+        }
     except Exception as e:
         return {'enabled': True, 'available': False, 'label': None, 'prob': 0.0, 'error': str(e)}
 
@@ -278,6 +289,17 @@ def predict_textrcnn(text, weight_path, vocab_path, num2name_path, cfg):
 
         num2name = load_num2name(num2name_path or '')
         pred_name = num2name.get(str(pred_idx), str(pred_idx))
-        return {'enabled': True, 'available': True, 'label': pred_name, 'prob': pred_prob, 'error': ''}
+        proba_by_label = {}
+        for idx in range(int(probs.shape[0])):
+            nm = num2name.get(str(idx), str(idx))
+            proba_by_label[str(nm)] = float(probs[idx].item())
+        return {
+            'enabled': True,
+            'available': True,
+            'label': pred_name,
+            'prob': pred_prob,
+            'proba_by_label': proba_by_label,
+            'error': '',
+        }
     except Exception as e:
         return {'enabled': True, 'available': False, 'label': None, 'prob': 0.0, 'error': str(e)}

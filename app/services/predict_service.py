@@ -36,6 +36,77 @@ TORCH_MODEL_TYPES = HF_MODEL_TYPES + ('textcnn', 'textrcnn')
 logger = logging.getLogger(__name__)
 
 
+def _coerce_snapshot_bool(v):
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, str):
+        return v.strip().lower() in ('1', 'true', 'yes', 'on')
+    return bool(v)
+
+
+def apply_fusion_snapshot_from_metrics_json(model_info, cfg):
+    """
+    将 model_info.metrics_json.fusion_snapshot 合并进 cfg（在 config_json 之前）。
+    同一条登记上 config_json 中的键会覆盖快照，便于在模型管理中单独改参。
+    """
+    if not model_info or getattr(model_info, 'model_type', None) != 'fusion':
+        return
+    raw = (model_info.metrics_json or '').strip()
+    if not raw:
+        return
+    try:
+        root = json.loads(raw)
+    except Exception:
+        return
+    snap = root.get('fusion_snapshot')
+    if not isinstance(snap, dict):
+        return
+    weights = snap.get('weights')
+    if isinstance(weights, dict):
+        for k, v in weights.items():
+            if not isinstance(k, str) or not k.startswith('weight_'):
+                continue
+            try:
+                cfg[k] = float(v)
+            except (TypeError, ValueError):
+                pass
+    enables = snap.get('enables')
+    if isinstance(enables, dict):
+        for k, v in enables.items():
+            if isinstance(k, str) and k.startswith('enable_'):
+                cfg[k] = _coerce_snapshot_bool(v)
+    paths = snap.get('paths')
+    if isinstance(paths, dict):
+        for role in ('svm', 'knn', 'rf', 'dt', 'lr'):
+            p = paths.get(role)
+            if not isinstance(p, dict):
+                continue
+            fp = (p.get('file_path') or '').strip()
+            vp = (p.get('vectorizer_path') or '').strip()
+            if fp:
+                cfg['{}_model_path'.format(role)] = fp
+            if vp:
+                cfg['tfidf_vectorizer_path_{}'.format(role)] = vp
+                if role == 'svm':
+                    cfg['tfidf_vectorizer_path'] = vp
+        for role in ('textcnn', 'textrcnn'):
+            p = paths.get(role)
+            if not isinstance(p, dict):
+                continue
+            fp = (p.get('file_path') or '').strip()
+            vp = (p.get('vectorizer_path') or '').strip()
+            if role == 'textcnn':
+                if fp:
+                    cfg['textcnn_weight_path'] = fp
+                if vp:
+                    cfg['textcnn_vocab_path'] = vp
+            else:
+                if fp:
+                    cfg['textrcnn_weight_path'] = fp
+                if vp:
+                    cfg['textrcnn_vocab_path'] = vp
+
+
 def _json_clean_for_detail(obj):
     """保证 prediction_detail 可 json.dumps（去掉 numpy 标量等）。"""
     if obj is None:
@@ -204,6 +275,8 @@ class PredictService:
                 cfg['enable_textrcnn'] = False
                 cfg['enable_rules'] = True
 
+        if model_info and model_info.model_type == 'fusion':
+            apply_fusion_snapshot_from_metrics_json(model_info, cfg)
         if model_info and model_info.config_json:
             try:
                 cfg.update(json.loads(model_info.config_json))
